@@ -7,6 +7,7 @@ import discord
 from discord import ButtonStyle
 import settings
 from discord.ext import commands
+from mybutton import MyButton
 
 # GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '%'
 intents = discord.Intents.default()  
@@ -154,32 +155,51 @@ async def top10(ctx):
     
     cursor.close()
 
+# FUNCTIONS NEEDED FOR CHALLENGING PPL
+def duel_acceptance():
+    print("trololo")
+
 
 # CHALLENGE COMMAND
 @bot.command()
 async def challenge(ctx, opponent_nick):
     await ctx.send(f"You are trying to challenge {opponent_nick} to ft7!")
 
-    # INITIALIZE CHALLENGE MESSAGES
-    challenger_message = f"```You have challenged {opponent_nick} to ft7!```"
-    opponent_message = f"```You have been challenged to ft7 by {ctx.author.nick}! If you accept, both of you get to select win, stalemate or loss for yourselves.```"
-    accept_button = discord.ui.Button(style=ButtonStyle.success, label="Accept!")
-    refuse_button = discord.ui.Button(style=ButtonStyle.danger, label="Refuse!")
+    # CHALLENGE MESSAGES
+    challenger_name = ctx.author.nick
+    if ctx.author.nick is None:
+        challenger_name = ctx.author.name
 
-    # IF OPPONENT IS FOUND, SEND CHALLENGE
+    challenger_message = f"```You have challenged {opponent_nick} to ft7!```"
+    opponent_message = f"```You have been challenged to ft7 by {challenger_name}! If you accept, both of you get to select win, stalemate or loss for yourselves.```"
+    
+    # ACCEPT BUTTONS AND VIEW
+    accept_view = discord.ui.View()
+
+    accept_button = MyButton(label="Accept!", style=ButtonStyle.success)
+    accept_button.callback = accept_button.option_callback
+    refuse_button = MyButton(label="Refuse!", style=ButtonStyle.danger)
+    refuse_button.callback = accept_button.option_callback
+
+    # USE OPPONENT NICK OR NAME TO IDENTIFY OPPONENT
     opponent = discord.utils.get(ctx.guild.members, nick=opponent_nick)
     if opponent is None:
         opponent = discord.utils.get(ctx.guild.members, name=opponent_nick)
-    if opponent:
+    
+    # MAKE SURE ONE DOESN'T CHALLENGE THEMSELF
+    #if opponent == ctx.author:
+    #    await ctx.send("It seems you tried to challenge yourself! If there is a bug, please contact Ludus admins.")
+
+    # IF OPPONENT EXISTS:
+    elif opponent:
         await ctx.send(f"Opponent has been found. If he will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
-
-
-        view = discord.ui.View()
-        view.add_item(accept_button)
-        view.add_item(refuse_button)
-        await ctx.author.send(challenger_message, view=view)
-        await opponent.send(opponent_message, view=view)
         
+        accept_view.add_item(accept_button)
+        accept_view.add_item(refuse_button)
+        await ctx.author.send(challenger_message)
+        await opponent.send(opponent_message, view=accept_view)
+
+    # IF OPPONENT DOES NOT EXIST
     else:
         await ctx.send("The opponent you selected does not exist!")
 
