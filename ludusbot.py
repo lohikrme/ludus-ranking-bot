@@ -4,6 +4,7 @@
 import random
 import psycopg2
 import discord
+from discord import ButtonStyle
 import settings
 from discord.ext import commands
 
@@ -55,6 +56,9 @@ async def factual(ctx):
                 "The heaviest sumo ever was Orora weighting up to 292kg with a height of 190cm",
                 "Some parrots such as cockatoos, macaws and conures can produce up to 135 decibel sound and induce immediate hearing damage to humans.",
                 "Airplane gasolin still contains lead in 2024 because the gasolin freezes so much in the air that ethanol cannot be used. Living nearby airfields can therefore be dangerous.",
+                "Nergi is smartest ludus player",
+                "Busbyy (BSB) is the secret name of PSP",
+                "KRAAAK!"
 
                 ]
     
@@ -151,10 +155,33 @@ async def top10(ctx):
     cursor.close()
 
 
-
 # CHALLENGE COMMAND
+@bot.command()
+async def challenge(ctx, opponent_nick):
+    await ctx.send(f"You are trying to challenge {opponent_nick} to ft7!")
+
+    # INITIALIZE CHALLENGE MESSAGES
+    challenger_message = f"```You have challenged {opponent_nick} to ft7!```"
+    opponent_message = f"```You have been challenged to ft7 by {ctx.author.nick}! If you accept, both of you get to select win, stalemate or loss for yourselves.```"
+    accept_button = discord.ui.Button(style=ButtonStyle.success, label="Accept!")
+    refuse_button = discord.ui.Button(style=ButtonStyle.danger, label="Refuse!")
+
+    # IF OPPONENT IS FOUND, SEND CHALLENGE
+    opponent = discord.utils.get(ctx.guild.members, nick=opponent_nick)
+    if opponent is None:
+        opponent = discord.utils.get(ctx.guild.members, name=opponent_nick)
+    if opponent:
+        await ctx.send(f"Opponent has been found. If he will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
 
 
+        view = discord.ui.View()
+        view.add_item(accept_button)
+        view.add_item(refuse_button)
+        await ctx.author.send(challenger_message, view=view)
+        await opponent.send(opponent_message, view=view)
+        
+    else:
+        await ctx.send("The opponent you selected does not exist!")
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
