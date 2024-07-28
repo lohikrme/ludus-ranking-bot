@@ -1,9 +1,10 @@
 import discord
+from discord import ButtonStyle
 
 class MyButton(discord.ui.Button):
-    def __init__(self, label, style):
-        super().__init__(label=label, style=style)
+    def __init__(self, custom_id, label, style, callback_function):
+        super().__init__(custom_id=custom_id, label=label, style=style)
+        self.callback_function = callback_function
 
-    async def option_callback(self, interaction):
-        if interaction:
-            print("option_callback works!")
+    async def callback(self, interaction):
+        await self.callback_function(interaction)

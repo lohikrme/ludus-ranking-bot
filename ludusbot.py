@@ -156,14 +156,43 @@ async def top10(ctx):
     cursor.close()
 
 # FUNCTIONS NEEDED FOR CHALLENGING PPL
-def duel_acceptance():
-    print("trololo")
+    
+async def accept_duel(interaction):
+    print("Duel has been accepted!")
+
+async def refuse_duel(interaction, view, challenger, opponent_nick):
+    print("Duel has been refused!")
+    # Iterate through the ActionRows of the message
+    for action_row in interaction.message.components:
+        # Iterate through the children of each ActionRow
+        for component in action_row.children:
+            # Check if the component's custom_id matches the ones we're looking for
+            if component.custom_id in ["1", "2"]:
+                # Remove the component from the view
+                view.remove_item(component)
+    
+    await interaction.response.send_message(f"You have refused the challenge by {challenger.name}!", ephemeral=True)
+    await challenger.send(f"Your challenge to {opponent_nick} has been refused.")
+
+
 
 
 # CHALLENGE COMMAND
 @bot.command()
 async def challenge(ctx, opponent_nick):
     await ctx.send(f"You are trying to challenge {opponent_nick} to ft7!")
+
+    # STORE CHALLENGER AND OPPONENT AS VARIABLES
+    opponent = discord.utils.get(ctx.guild.members, nick=opponent_nick)
+    if opponent is None:
+        opponent = discord.utils.get(ctx.guild.members, name=opponent_nick)
+    challenger = ctx.author
+
+    # VIEWS AND BUTTONS
+    accept_view = discord.ui.View()
+
+    accept_button = MyButton(custom_id="1", label="Accept!", style=ButtonStyle.success, callback_function=accept_duel)
+    refuse_button = MyButton(custom_id="2", label="Refuse!", style=ButtonStyle.danger, callback_function=lambda interaction: refuse_duel(interaction, accept_view, challenger, opponent_nick))
 
     # CHALLENGE MESSAGES
     challenger_name = ctx.author.nick
@@ -173,25 +202,13 @@ async def challenge(ctx, opponent_nick):
     challenger_message = f"```You have challenged {opponent_nick} to ft7!```"
     opponent_message = f"```You have been challenged to ft7 by {challenger_name}! If you accept, both of you get to select win, stalemate or loss for yourselves.```"
     
-    # ACCEPT BUTTONS AND VIEW
-    accept_view = discord.ui.View()
 
-    accept_button = MyButton(label="Accept!", style=ButtonStyle.success)
-    accept_button.callback = accept_button.option_callback
-    refuse_button = MyButton(label="Refuse!", style=ButtonStyle.danger)
-    refuse_button.callback = accept_button.option_callback
-
-    # USE OPPONENT NICK OR NAME TO IDENTIFY OPPONENT
-    opponent = discord.utils.get(ctx.guild.members, nick=opponent_nick)
-    if opponent is None:
-        opponent = discord.utils.get(ctx.guild.members, name=opponent_nick)
-    
     # MAKE SURE ONE DOESN'T CHALLENGE THEMSELF
     #if opponent == ctx.author:
     #    await ctx.send("It seems you tried to challenge yourself! If there is a bug, please contact Ludus admins.")
 
-    # IF OPPONENT EXISTS:
-    elif opponent:
+    # IF OPPONENT EXISTS: (CHANGE TO ELIF IF CHALLENGING THEMSELF IS BANNED)
+    if opponent:
         await ctx.send(f"Opponent has been found. If he will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
         
         accept_view.add_item(accept_button)
@@ -201,7 +218,7 @@ async def challenge(ctx, opponent_nick):
 
     # IF OPPONENT DOES NOT EXIST
     else:
-        await ctx.send("The opponent you selected does not exist!")
+        await ctx.send("The opponent you selected does not exist! Try their real discord name if nick not work.")
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
