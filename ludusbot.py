@@ -8,6 +8,10 @@ from discord import ButtonStyle
 import settings
 from discord.ext import commands
 from mybutton import MyButton
+from myview import MyView
+
+# CHALLENGE STATUS, ONLY 1 CHALLENGE ALLOWED AT TIME, CANCEL OR COMPLITING RESULTS REFRESH
+challenge_status = False
 
 # GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '%'
 intents = discord.Intents.default()  
@@ -157,42 +161,36 @@ async def top10(ctx):
 
 # FUNCTIONS NEEDED FOR CHALLENGING PPL
 
-async def refuse_duel(interaction, view, challenger, opponent_nick):
-    # Iterate through the ActionRows of the message
-    for action_row in interaction.message.components:
-        # Iterate through the children of each ActionRow
-        for component in action_row.children:
-            # Check if the component's custom_id matches the ones we're looking for
-            if component.custom_id in ["1", "2"]:
-                # Remove the component from the view
-                view.remove_item(component)
-    await interaction.response.send_message(f"You have refused the challenge by {challenger.name}!", ephemeral=True)
-    await challenger.send(f"Your challenge to {opponent_nick} has been refused.")
+async def cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick):
+    challenge_status = False
+    accept_view.disable_all_items()
+    refuse_view.disable_all_items()
+    await interaction.response.send_message(f"The challenge by {challenger.name} has been cancelled!", ephemeral=True)
+    await challenger.send(f"Your challenge to {opponent_nick} has been cancelled!")
 
 
-async def accept_duel(interaction, view, challenger, opponent, challenger_view, opponent_view):
-    print("Duel has been accepted!")
-    for action_row in interaction.message.components:
-        # Iterate through the children of each ActionRow
-        for component in action_row.children:
-            # Check if the component's custom_id matches the ones we're looking for
-            if component.custom_id in ["1", "2"]:
-                # Remove the component from the view
-                view.remove_item(component)
+async def accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_view, opponent_view):
+    
+    accept_view.disable_all_items()
+    refuse_view.disable_all_items()
+
     await interaction.response.send_message(f"You have accepted the challenge by {challenger.name}!", ephemeral=True)
     await challenger.send(f"Your challenge to {opponent.name} has been accepted.")
 
-    await challenger.send("Did you win, stalemate or lose?", view=challenger_view)
-    await opponent.send("Did you win, stalemate or lose?", view=opponent_view)
+    await challenger.send("Did you win, lose or cancel?", view=challenger_view)
+    await opponent.send("Did you win, lose or cancel?", view=opponent_view)
 
 async def receive_player_results(interaction):
     print("challenger or opponent won")
 
+async def report_player_scores(interaction):
+    challenge_status = False
 
 
 # CHALLENGE COMMAND
 @bot.command()
 async def challenge(ctx, opponent_nick):
+    challenge_status = True
     await ctx.send(f"You are trying to challenge {opponent_nick} to ft7!")
 
     # CHALLENGER AND OPPONENT AS VARIABLES
@@ -202,27 +200,29 @@ async def challenge(ctx, opponent_nick):
     challenger = ctx.author
 
     # VIEWS AND BUTTONS (accept_view is before accepting to duel, ch_results and op_results after)
-    challenger_results_view = discord.ui.View()
+    cancel_button = MyButton(custom_id="2", label="Cancel!", style=ButtonStyle.secondary, callback_function=lambda interaction: cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick))
+
+    challenger_results_view = MyView("110")
     challenger_win_button = MyButton(custom_id="10", label="Win", style=ButtonStyle.success, callback_function=lambda interaction: receive_player_results(interaction))
-    challenger_stalemate_button = MyButton(custom_id="11", label="stalemate", style=ButtonStyle.secondary, callback_function=lambda interaction: receive_player_results(interaction))
-    challenger_loss_button = MyButton(custom_id="12", label="loss", style=ButtonStyle.danger, callback_function=lambda interaction: receive_player_results(interaction))
+    challenger_loss_button = MyButton(custom_id="11", label="Loss", style=ButtonStyle.danger, callback_function=lambda interaction: receive_player_results(interaction))
     challenger_results_view.add_item(challenger_win_button)
-    challenger_results_view.add_item(challenger_stalemate_button)
     challenger_results_view.add_item(challenger_loss_button)
+    challenger_results_view.add_item(cancel_button)
 
-    opponent_results_view = discord.ui.View()
-    opponent_win_button = MyButton(custom_id="10", label="Win", style=ButtonStyle.success, callback_function=lambda interaction: receive_player_results(interaction))
-    opponent_stalemate_button = MyButton(custom_id="11", label="stalemate", style=ButtonStyle.secondary, callback_function=lambda interaction: receive_player_results(interaction))
-    opponent_loss_button = MyButton(custom_id="12", label="loss", style=ButtonStyle.danger, callback_function=lambda interaction: receive_player_results(interaction))
+    opponent_results_view = MyView("111")
+    opponent_win_button = MyButton(custom_id="20", label="Win", style=ButtonStyle.success, callback_function=lambda interaction: receive_player_results(interaction))
+    opponent_loss_button = MyButton(custom_id="21", label="Loss", style=ButtonStyle.danger, callback_function=lambda interaction: receive_player_results(interaction))
     opponent_results_view.add_item(opponent_win_button)
-    opponent_results_view.add_item(opponent_stalemate_button)
     opponent_results_view.add_item(opponent_loss_button)
+    opponent_results_view.add_item(cancel_button)
 
-    accept_view = discord.ui.View()
+    accept_view = MyView("100")
     accept_button = MyButton(custom_id="1", label="Accept!", style=ButtonStyle.success, callback_function=lambda interaction: accept_duel(interaction, accept_view, challenger, opponent, challenger_results_view, opponent_results_view))
-    refuse_button = MyButton(custom_id="2", label="Refuse!", style=ButtonStyle.danger, callback_function=lambda interaction: refuse_duel(interaction, accept_view, challenger, opponent_nick))
     accept_view.add_item(accept_button)
-    accept_view.add_item(refuse_button)
+    accept_view.add_item(cancel_button)
+
+    refuse_view = MyView("101")
+    refuse_view.add_item(cancel_button)
 
 
     # CHALLENGE MESSAGES
@@ -241,11 +241,12 @@ async def challenge(ctx, opponent_nick):
     # IF OPPONENT EXISTS: (CHANGE TO ELIF IF CHALLENGING THEMSELF IS BANNED)
     if opponent:
         await ctx.send(f"Opponent has been found. If he will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
-        await ctx.author.send(challenger_message)
+        await ctx.author.send(challenger_message, view=refuse_view)
         await opponent.send(opponent_message, view=accept_view)
 
     # IF OPPONENT DOES NOT EXIST
     else:
+        challenge_status = False
         await ctx.send("The opponent you selected does not exist! Try their real discord name if nick not work.")
 
 
