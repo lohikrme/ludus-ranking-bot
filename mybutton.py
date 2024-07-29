@@ -1,5 +1,7 @@
+# mybutton.py
+# Made by Chinese Parrot 29th july 2024
+
 import discord
-from discord import ButtonStyle
 
 class MyButton(discord.ui.Button):
     def __init__(self, custom_id, label, style, callback_function):

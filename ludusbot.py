@@ -9,6 +9,7 @@ import settings
 from discord.ext import commands
 from mybutton import MyButton
 from myview import MyView
+import asyncio
 
 # CHALLENGE STATUS, ONLY 1 CHALLENGE ALLOWED AT TIME, CANCEL OR COMPLITING RESULTS REFRESH
 challenge_status = False
@@ -161,24 +162,49 @@ async def top10(ctx):
 
 # FUNCTIONS NEEDED FOR CHALLENGING PPL
 
-async def cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick):
+
+# ALWAYS SEND MESSAGES/VIEWS WITH THIS, EXPIRES THEM AFTER 55 SECONDS
+async def send_and_expire_message(channel, message, view=None, expire_after_seconds=55):
+    challenge_status = False
+    sent_message = await channel.send(message)
+    
+    # Odota tietty aika ennen kuin muokataan viesti
+    await asyncio.sleep(expire_after_seconds)
+    
+    # Muokkaa viestiä "expired" viestiksi
+    await sent_message.edit(content="Message expired")
+    
+    if view:
+        view.clear_items()
+        view.disable_all_items()
+
+
+async def cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick, challenger_results_view, opponent_results_view):
     challenge_status = False
     accept_view.disable_all_items()
     refuse_view.disable_all_items()
+    challenger_results_view.disable_all_items()
+    opponent_results_view.disable_all_items()
+
     await interaction.response.send_message(f"The challenge by {challenger.name} has been cancelled!", ephemeral=True)
     await challenger.send(f"Your challenge to {opponent_nick} has been cancelled!")
 
+    # Additional actions, like updating the duel status in your database, can go here
+
+
 
 async def accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_view, opponent_view):
-    
     accept_view.disable_all_items()
     refuse_view.disable_all_items()
-
-    await interaction.response.send_message(f"You have accepted the challenge by {challenger.name}!", ephemeral=True)
-    await challenger.send(f"Your challenge to {opponent.name} has been accepted.")
-
-    await challenger.send("Did you win, lose or cancel?", view=challenger_view)
-    await opponent.send("Did you win, lose or cancel?", view=opponent_view)
+    try:
+        await interaction.response.send_message(f"You have accepted the challenge by {challenger.name}!", ephemeral=True)
+        await challenger.send(f"Your challenge to {opponent.name} has been accepted.")
+        challenger_sent_message = await challenger.send("Did you win, lose or cancel?", view=challenger_view)
+        opponent_sent_message = await opponent.send("Did you win, lose or cancel?", view=opponent_view)
+        global_challenge_data[challenger.id] = challenger_sent_message
+        global_challenge_data[opponent.id] = opponent_sent_message
+    except Exception as e:
+        print(f"Failed to accept duel: {e}")
 
 async def receive_player_results(interaction):
     print("challenger or opponent won")
@@ -186,6 +212,9 @@ async def receive_player_results(interaction):
 async def report_player_scores(interaction):
     challenge_status = False
 
+
+# Global variable to store message IDs
+global_challenge_data = {}
 
 # CHALLENGE COMMAND
 @bot.command()
@@ -200,7 +229,7 @@ async def challenge(ctx, opponent_nick):
     challenger = ctx.author
 
     # VIEWS AND BUTTONS (accept_view is before accepting to duel, ch_results and op_results after)
-    cancel_button = MyButton(custom_id="2", label="Cancel!", style=ButtonStyle.secondary, callback_function=lambda interaction: cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick))
+    cancel_button = MyButton(custom_id="2", label="Cancel!", style=ButtonStyle.secondary, callback_function=lambda interaction: cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick, challenger_results_view, opponent_results_view))
 
     challenger_results_view = MyView("110")
     challenger_win_button = MyButton(custom_id="10", label="Win", style=ButtonStyle.success, callback_function=lambda interaction: receive_player_results(interaction))
@@ -216,8 +245,8 @@ async def challenge(ctx, opponent_nick):
     opponent_results_view.add_item(opponent_loss_button)
     opponent_results_view.add_item(cancel_button)
 
-    accept_view = MyView("100")
-    accept_button = MyButton(custom_id="1", label="Accept!", style=ButtonStyle.success, callback_function=lambda interaction: accept_duel(interaction, accept_view, challenger, opponent, challenger_results_view, opponent_results_view))
+    accept_view = MyView("100")                                                                                             # accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_view, opponent_view):
+    accept_button = MyButton(custom_id="1", label="Accept!", style=ButtonStyle.success, callback_function=lambda interaction: accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_results_view, opponent_results_view))
     accept_view.add_item(accept_button)
     accept_view.add_item(cancel_button)
 
@@ -240,9 +269,19 @@ async def challenge(ctx, opponent_nick):
 
     # IF OPPONENT EXISTS: (CHANGE TO ELIF IF CHALLENGING THEMSELF IS BANNED)
     if opponent:
-        await ctx.send(f"Opponent has been found. If he will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
-        await ctx.author.send(challenger_message, view=refuse_view)
-        await opponent.send(opponent_message, view=accept_view)
+        try:
+            if opponent:
+                await ctx.send(f"Opponent has been found. If they will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
+
+                # Send messages to challenger and opponent
+                challenger_sent_message = await ctx.author.send(challenger_message, view=refuse_view)
+                opponent_sent_message = await opponent.send(opponent_message, view=accept_view)
+
+                # Store message IDs in global variable immediately after sending
+                global_challenge_data[challenger.id] = challenger_sent_message.id
+                global_challenge_data[opponent.id] = opponent_sent_message.id
+        except Exception as e:
+            await ctx.send(f"An error occurred while processing your challenge: {e}")
 
     # IF OPPONENT DOES NOT EXIST
     else:
