@@ -10,3 +10,4 @@ class MyButton(discord.ui.Button):
 
     async def callback(self, interaction):
         await self.callback_function(interaction)
+        self.disabled = True
