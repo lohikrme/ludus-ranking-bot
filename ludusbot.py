@@ -7,8 +7,7 @@ import discord
 from discord import ButtonStyle
 import settings
 from discord.ext import commands
-from mybutton import MyButton
-from myview import MyView
+import asyncio
 
 # GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '%'
 intents = discord.Intents.default()  
@@ -164,150 +163,36 @@ async def top10(ctx):
 
 
 
-# FUNCTIONS NEEDED FOR CHALLENGING PPL
 
-# Global variable to store challenge status, allow challenge only if False
-challenge_status = {}
-message_data = {}
-
-async def cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick, challenger_results_view, opponent_results_view, challenger_id, opponent_id):
-    global message_data
-    challenge_status[challenger_id] = True
-    print("DISCORD VERSION IS: " + discord.__version__)
-
-    challenger_sent_message = await interaction.response.send_message(f"The challenge by {challenger.name} has been cancelled!", ephemeral=True)
-    opponent_sent_message = await challenger.send(f"Your challenge to {opponent_nick} has been cancelled!")
-
-    message_data[challenger_id] = challenger_sent_message
-    message_data[opponent_id] = opponent_sent_message
-
-    print (message_data[challenger_id])
-    print (message_data[opponent_id])
-    
-
-    # Additional actions, like updating the duel status in your database, can go here
-
-async def accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_view, opponent_view, challenger_id, opponent_id):
-    global message_data
-    try:
-        await interaction.response.send_message(f"You have accepted the challenge by {challenger.name}!", ephemeral=True)
-        await challenger.send(f"Your challenge to {opponent.name} has been accepted.")
-        challenger_sent_message = await challenger.send("Did you win, lose or cancel?", view=challenger_view)
-        opponent_sent_message = await opponent.send("Did you win, lose or cancel?", view=opponent_view)
-
-        message_data[challenger_id] = challenger_sent_message
-        message_data[opponent_id] = opponent_sent_message
-
-    except Exception as e:
-        print(f"Failed to accept duel: {e}")
-
-async def receive_player_results(interaction):
-    print("challenger or opponent won")
-
-async def report_player_scores(interaction):
-    challenge_status = False
-
-
-# CHALLENGE COMMAND
 @bot.command()
-async def challenge(ctx, opponent_nick):
-    global challenge_status
-    global message_data
-    challenger_id = str(ctx.author.id)  # Convert to string for dictionary keys
-    
-    if challenger_id in challenge_status and challenge_status[challenger_id]:
-        await ctx.send(f"You have already challenged {opponent_nick}. Cancel that before challenging somebody again.")
+async def challenge(ctx, opponent: discord.Member):
+    # Step 1: Initial Challenge Message
+    challenge_embed = discord.Embed(title="Challenge Sent!",
+                                    description=f"{ctx.author} has challenged {opponent.mention} to a duel!")
+    challenge_msg = await ctx.send(embed=challenge_embed)
+
+    # Add reactions for Accept, Decline, Cancel
+    await challenge_msg.add_reaction("👍")  # Accept
+    await challenge_msg.add_reaction("👎")  # Decline
+    await challenge_msg.add_reaction("🚫")  # Cancel
+
+    # Wait for a reaction
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == ctx.author and str(r.emoji) in ["👍", "👎", "🚫"])
+    except asyncio.TimeoutError:
+        await ctx.send("Challenge expired.")
         return
-    challenge_status[challenger_id] = True
-    await ctx.send(f"You are trying to challenge {opponent_nick} to ft7!")
 
+    # Handle reactions
+    if str(reaction.emoji) == "👍":
+        await ctx.send("Challenge accepted!")
+        # Proceed to result selection
+    elif str(reaction.emoji) == "👎":
+        await ctx.send("Challenge declined.")
+    elif str(reaction.emoji) == "🚫":
+        await ctx.send("Challenge canceled.")
 
-    # CHALLENGER AND OPPONENT AS VARIABLES
-    opponent = discord.utils.get(ctx.guild.members, nick=opponent_nick)
-    if opponent is None:
-        opponent = discord.utils.get(ctx.guild.members, name=opponent_nick)
-    challenger = ctx.author
-
-    opponent_id = str(opponent.id)
-    print(opponent_id)
-
-    # VIEWS AND BUTTONS (accept_view is before accepting to duel, ch_results and op_results after)
-    cancel_button = MyButton(custom_id="2", label="Cancel!", style=ButtonStyle.secondary, callback_function=lambda interaction: cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick, challenger_results_view, opponent_results_view, challenger_id, opponent_id))
-
-    challenger_results_view = MyView("110")
-    challenger_win_button = MyButton(custom_id="10", label="Win", style=ButtonStyle.success, callback_function=lambda interaction: receive_player_results(interaction))
-    challenger_loss_button = MyButton(custom_id="11", label="Loss", style=ButtonStyle.danger, callback_function=lambda interaction: receive_player_results(interaction))
-    challenger_results_view.add_item(challenger_win_button)
-    challenger_results_view.add_item(challenger_loss_button)
-    challenger_results_view.add_item(cancel_button)
-
-    opponent_results_view = MyView("111")
-    opponent_win_button = MyButton(custom_id="20", label="Win", style=ButtonStyle.success, callback_function=lambda interaction: receive_player_results(interaction))
-    opponent_loss_button = MyButton(custom_id="21", label="Loss", style=ButtonStyle.danger, callback_function=lambda interaction: receive_player_results(interaction))
-    opponent_results_view.add_item(opponent_win_button)
-    opponent_results_view.add_item(opponent_loss_button)
-    opponent_results_view.add_item(cancel_button)
-
-    accept_view = MyView("100")                                                                                             # accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_view, opponent_view):
-    accept_button = MyButton(custom_id="1", label="Accept!", style=ButtonStyle.success, callback_function=lambda interaction: accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_results_view, opponent_results_view, challenger_id, opponent_id))
-    accept_view.add_item(accept_button)
-    accept_view.add_item(cancel_button)
-
-    refuse_view = MyView("101")
-    refuse_view.add_item(cancel_button)
-
-    # DISABLED VIEWS AND BUTTONS
-
-    disabled_cancel_button = MyButton(custom_id="2", label="Cancel!", style=ButtonStyle.secondary, disabled=True, callback_function=lambda interaction: cancel_duel(interaction, accept_view, refuse_view, challenger, opponent_nick, challenger_results_view, opponent_results_view, challenger_id, opponent_id))
-
-    disabled_accept_view = MyView("200")
-    disabled_accept_button = MyButton(custom_id="1000", label="Accept!", style=ButtonStyle.success, disabled=True, callback_function=lambda interaction: accept_duel(interaction, accept_view, refuse_view, challenger, opponent, challenger_results_view, opponent_results_view, challenger_id, opponent_id))
-    disabled_accept_view.add_item(disabled_accept_button)
-    disabled_accept_view.add_item(disabled_cancel_button)
-
-    disabled_results_view = MyView("201")
-    disabled_win_button = MyButton(custom_id="1020", label="Win", style=ButtonStyle.success, disabled=True, callback_function=lambda interaction: receive_player_results(interaction))
-    disabled_loss_button = MyButton(custom_id="1021", label="Loss", style=ButtonStyle.danger, disabled=True, callback_function=lambda interaction: receive_player_results(interaction))
-    disabled_results_view.add_item(disabled_win_button)
-    disabled_results_view.add_item(disabled_loss_button)
-    disabled_results_view.add_item(disabled_cancel_button)
-
-    disabled_refuse_view = MyView("202")
-    disabled_refuse_view.add_tiem(disabled_cancel_button)
-
-
-    # CHALLENGE MESSAGES
-    challenger_name = ctx.author.nick
-    if ctx.author.nick is None:
-        challenger_name = ctx.author.name
-
-    challenger_message = f"```You have challenged {opponent_nick} to ft7!```"
-    opponent_message = f"```You have been challenged to ft7 by {challenger_name}! If you accept, both of you get to select win, stalemate or loss for yourselves.```"
-    
-
-    # MAKE SURE ONE DOESN'T CHALLENGE THEMSELF
-    #if opponent == ctx.author:
-    #    await ctx.send("It seems you tried to challenge yourself! If there is a bug, please contact Ludus admins.")
-
-    # IF OPPONENT EXISTS: (CHANGE TO ELIF IF CHALLENGING THEMSELF IS BANNED)
-    if opponent:
-        try:
-            if opponent:
-                await ctx.send(f"Opponent has been found. If they will accept the challenge, you both get to select win, stalemate or loss for yourselves.")
-
-                challenger_sent_message = await ctx.author.send(challenger_message, view=refuse_view)
-                opponent_sent_message = await opponent.send(opponent_message, view=accept_view)
-
-                message_data[challenger_id] = challenger_sent_message
-                message_data[opponent_id] = opponent_sent_message
-
-        except Exception as e:
-            await ctx.send(f"An error occurred while processing your challenge: {e}")
-
-    # IF OPPONENT DOES NOT EXIST
-    else:
-        challenge_status[challenger_id] = False
-        await ctx.send("The opponent you selected does not exist! Try their real discord name if nick not work.")
+    # Further steps (result selection, verification, database update) would follow here...
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
