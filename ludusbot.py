@@ -4,7 +4,6 @@
 import random
 import psycopg2
 import discord
-from discord import ButtonStyle
 import settings
 from discord.ext import commands
 import asyncio
@@ -159,7 +158,8 @@ async def leaderboard(ctx):
 
 
 # TOP10 COMMAND
-@bot.command()
+@bot.slash_command(name="top10")
+#@bot.command()
 async def top10(ctx):
     await ctx.send("Printing points of top10 players starting...")
     
