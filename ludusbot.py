@@ -171,33 +171,57 @@ challenge_status = []
 async def challenge(ctx, opponent: discord.Member):
     global challenge_status
     if (ctx.author.id in challenge_status):
-        await ctx.send("You have already challenged somebody. Please cancel that before challenging a new player.")
+        await ctx.send(f"You {ctx.author.mention} have already challenged somebody. Please cancel that before challenging a new player.")
         return
     challenge_status.append(ctx.author.id)
     # Step 1: Initial Challenge Message
     challenge_embed = discord.Embed(title="Challenge Sent!",
-                                    description=f"{ctx.author} has challenged {opponent.mention} to a duel!")
+                                    description=f"{ctx.author.mention} has challenged {opponent.mention} to a duel! {opponent.mention} should click swords emoticon if they want to accept the ft7!")
     challenge_msg = await ctx.send(embed=challenge_embed)
 
     # Add reactions for Accept, Decline, Cancel
-    await challenge_msg.add_reaction("👍")  # Accept
-    await challenge_msg.add_reaction("👎")  # Decline
+    await challenge_msg.add_reaction("⚔️")  # Accept
     await challenge_msg.add_reaction("🚫")  # Cancel
+    
 
     # Wait for a reaction
     try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == ctx.author and str(r.emoji) in ["👍", "👎", "🚫"])
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == opponent and str(r.emoji) in ["⚔️", "🚫"])
     except asyncio.TimeoutError:
         challenge_status.remove(ctx.author.id)
         await ctx.send("Challenge expired.")
         return
 
     # Handle reactions
-    if str(reaction.emoji) == "👍":
+    if str(reaction.emoji) == "⚔️":
         await ctx.send("Challenge accepted!")
+        
+        opponent_results_embed = discord.Embed(title="Opponent reports results!",
+        description=f"The opponent {opponent.mention} is supposed to answer this message! If challenger {ctx.author.mention} won press dagger emoticon! If opponent {opponent.mention} won press castle emoticon. If duel was cancelled press red emoticon.")
+        opponent_msg = await ctx.send(embed=opponent_results_embed)
+        await opponent_msg.add_reaction("🗡️") # challenger won
+        await opponent_msg.add_reaction("🏰") # opponent won
+        await opponent_msg.add_reaction("🚫") # cancel
+
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=1200.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
+        except asyncio.TimeoutError:
+            challenge_status.remove(ctx.author.id)
+            await ctx.send("FT7 expired.")
+            return
+        
+        if str(reaction.emoji) == "🗡️":
+            challenge_status.remove(ctx.author.id)
+            await ctx.send(f"Challenger {ctx.author.mention} has won the duel against the opponent {opponent.mention}!")
+        elif str(reaction.emoji) == "🏰":
+            challenge_status.remove(ctx.author.id)
+            await ctx.send(f"Opponent {opponent.mention} has won the duel against the challenger {ctx.author.mention}!")
+        elif str(reaction.emoji) == "🚫":
+            challenge_status.remove(ctx.author.id)
+            await ctx.send(f"The FT7 has been cancelled between the challenger {ctx.author.mention} and the opponent {opponent.mention}!")
+
+
         # Proceed to result selection
-    elif str(reaction.emoji) == "👎":
-        await ctx.send("Challenge declined.")
     elif str(reaction.emoji) == "🚫":
         await ctx.send("Challenge canceled.")
         challenge_status.remove(ctx.author.id)
