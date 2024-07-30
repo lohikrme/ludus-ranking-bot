@@ -72,6 +72,18 @@ async def factual(ctx):
     answer = random.choice(commands)
     await ctx.send(answer)
 
+
+# USE THIS TO CHECK IF REGISTERED
+async def is_registered(discord_id: str):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM players WHERE discord_id = %s", (discord_id,))
+    existing_user = cursor.fetchone()
+
+    if existing_user is not None: # user is registered
+        return True
+    
+    return False # user is not registered
+
 # REGISTER COMMAND
 @bot.command()
 async def register(ctx, nickname):
@@ -79,11 +91,8 @@ async def register(ctx, nickname):
     username = str(ctx.author.name)
 
     # NOTIFY USER THEY ARE ALREADY REGISTERED
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players WHERE username = %s", (username,))
-    existing_user = cursor.fetchone()
-
-    if existing_user is not None:
+    is_registered_result = await is_registered(str(ctx.author.id))
+    if is_registered_result:
         await ctx.send("You have already been registered! If you want to reset your rank, please contact Ludus admins.")
 
     # ADD A NEW USER
@@ -93,7 +102,7 @@ async def register(ctx, nickname):
         amount_of_lines = cursor.fetchone()[0]
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO players (username, points, nickname) VALUES (%s, %s, %s)", (username, 0, nickname))
+            cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points) VALUES (%s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000))
             await ctx.send("Your discord username has successfully been registered into Ludus players!")
         else:
             await ctx.send("The database is full. This most likely means that the database has been attacked by a spammer. \n This will not endanger security, but limit makes sure database wont grow too large. Please contact Ludus admins.")
@@ -107,17 +116,27 @@ async def changeNickName(ctx, nickname):
     username = str(ctx.author.name)
 
     # IF USERNAME EXISTS, CHANGE THEIR NICKNAME
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players WHERE username = %s", (username,))
-    existing_user = cursor.fetchone()
+    is_registered_result = await is_registered(str(ctx.author.id))
 
-    if existing_user is not None:
+    if is_registered_result:
         cursor = conn.cursor()
-        cursor.execute("SELECT nickname FROM players WHERE username = %s", (username,))
+        cursor.execute("SELECT nickname FROM players WHERE discord_id = %s", (str(ctx.author.id,)))
         old_nickname = cursor.fetchone()[0]
-        cursor.execute("UPDATE players SET nickname = %s WHERE username = %s", (nickname, username))
+        cursor.execute("UPDATE players SET nickname = %s WHERE discord_id = %s", (nickname, str(ctx.author.id)))
         await ctx.send(f"Your nickname has been updated! Your old nickname was {old_nickname}. Your new nickname is {nickname}")
 
+
+# MYSCORE COMMAND
+@bot.command()
+async def myscore(ctx):
+    is_registered_result = is_registered(str(ctx.author.id))
+    if not is_registered_result:
+        ctx.send(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        return
+    cursor = conn.cursor()
+    cursor.execute("SELECT nickname, points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+    score = str(cursor.fetchone())
+    await ctx.send(f"Your score is {score}")
 
 # lEADERBOARD COMMAND
 @bot.command()
@@ -162,17 +181,101 @@ async def top10(ctx):
     cursor.close()
 
 
+# UPDATE PLAYER POINTS IN DATABASE
+async def update_player_points(channel, challenger, opponent, challenger_win: bool):
+
+    # THESE CAN BE MODIFIED AS NEED
+    standard_point_change = 30
+    level_factor = 2
+
+    # FETCH CURRENT POINTS FROM DATABASE
+    cursor = conn.cursor()
+    cursor.execute("SELECT points FROM players WHERE discord_id = %s", (str(challenger.id),))
+    challenger_current_points = cursor.fetchone()[0]
+    cursor.execute("SELECT points FROM players WHERE discord_id = %s", (str(opponent.id),))
+    opponent_current_points = cursor.fetchone()[0]
+    
+    # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY 100p DIFFERENCES (POINT_lEVELS) THERE ARE
+    point_difference = abs(challenger_current_points - opponent_current_points)
+
+    point_levels = point_difference // 50
+
+
+    # INITIATE NEW POINTS, AND THEN CALCULATE THE NEW POINTS BASED ON THE FORMULA
+    challenger_new_points = challenger_current_points
+    opponent_new_points = opponent_current_points
+
+    # IF CHALLENGER WINS
+    if challenger_win:
+        if challenger_current_points > opponent_current_points:
+            point_change = max(standard_point_change - point_levels, 1)
+            challenger_new_points = challenger_current_points + point_change # challenger gains points
+            opponent_new_points = opponent_current_points - point_change # opponent loses points
+        elif challenger_current_points < opponent_current_points:
+            point_change = standard_point_change + point_levels
+            challenger_new_points = challenger_current_points + point_change # challenger gains points
+            opponent_new_points = opponent_current_points - point_change # opponent loses points
+    # IF OPPONENT WINS
+    else:
+        if challenger_current_points > opponent_current_points:
+            point_change = standard_point_change + point_levels
+            opponent_new_points = opponent_current_points + point_change # opponent gains points
+            challenger_new_points = challenger_current_points - point_change # challenger loses points
+            
+        elif challenger_current_points < opponent_current_points:
+            point_change = max(standard_point_change - point_levels, 1)
+            opponent_new_points = opponent_current_points + point_change # opponent gains points
+            challenger_new_points = challenger_current_points - point_change # challenger loses points
+
+    # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
+
+    # update challenger points
+    cursor.execute("UPDATE players SET points = %s, old_points = %s WHERE discord_id = %s", (challenger_new_points, challenger_current_points, str(challenger.id),))
+
+    # update opponent points
+    cursor.execute("UPDATE players SET points = %s, old_points = %s WHERE discord_id = %s", (opponent_new_points, opponent_current_points, str(opponent.id),))
+
+
+    # FEEDBACK USERS OF THEIR OLD AND NEW POINTS
+    new_scores_tittle = "***** NEW SCORES *****"
+    await channel.send(f"{new_scores_tittle.center(24)}")
+    await channel.send(f"Challenger {challenger.mention} old_points are: {challenger_current_points}. \n Challenger {challenger.mention} new points are {challenger_new_points} \n")
+    await channel.send(f"Opponent {opponent.mention} old_points are: {opponent_current_points}. \n Opponent {opponent.mention} new points are {opponent_new_points}")
+
+
+    return
+
 
 
 # CHALLENGE COMMAND
 challenge_status = []
 
+
 @bot.command()
 async def challenge(ctx, opponent: discord.Member):
     global challenge_status
+
+    # CHECK NOT CHALLENGE ONESELF
+    if (opponent.id == ctx.author.id):
+        await ctx.send("You may not challenge yourself!")
+        return
+
+    # CHECK CHALLENGER AND OPPONENT ARE REGISTERED, OTHERWISE NOTIFY AND RETURN
+    opponent_is_registered = await is_registered(str(opponent.id))
+    if not opponent_is_registered:
+        await ctx.send(f"The opponent {opponent.mention} has not yet been registered. Ask him to register before duel.")
+        return
+    
+    challenger_is_registered = await is_registered(str(ctx.author.id))
+    if not challenger_is_registered:
+        await ctx.send(f"The challenger {ctx.author.mention} has not yet been registered. Please register to be able to duel.")
+        return
+    
     if (ctx.author.id in challenge_status):
         await ctx.send(f"You {ctx.author.mention} have already challenged somebody. Please cancel that before challenging a new player.")
         return
+    
+
     challenge_status.append(ctx.author.id)
     # Step 1: Initial Challenge Message
     challenge_embed = discord.Embed(title="Challenge Sent!",
@@ -204,7 +307,7 @@ async def challenge(ctx, opponent: discord.Member):
         await opponent_msg.add_reaction("🚫") # cancel
 
         try:
-            reaction, user = await bot.wait_for('reaction_add', timeout=1200.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
+            reaction, user = await bot.wait_for('reaction_add', timeout=300.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
         except asyncio.TimeoutError:
             challenge_status.remove(ctx.author.id)
             await ctx.send("FT7 expired.")
@@ -213,9 +316,11 @@ async def challenge(ctx, opponent: discord.Member):
         if str(reaction.emoji) == "🗡️":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"Challenger {ctx.author.mention} has won the duel against the opponent {opponent.mention}!")
+            await update_player_points(ctx, ctx.author, opponent, True)
         elif str(reaction.emoji) == "🏰":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"Opponent {opponent.mention} has won the duel against the challenger {ctx.author.mention}!")
+            await update_player_points(ctx, ctx.author, opponent, False)
         elif str(reaction.emoji) == "🚫":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"The FT7 has been cancelled between the challenger {ctx.author.mention} and the opponent {opponent.mention}!")
