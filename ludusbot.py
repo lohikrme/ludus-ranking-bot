@@ -164,8 +164,16 @@ async def top10(ctx):
 
 
 
+# CHALLENGE COMMAND
+challenge_status = []
+
 @bot.command()
 async def challenge(ctx, opponent: discord.Member):
+    global challenge_status
+    if (ctx.author.id in challenge_status):
+        await ctx.send("You have already challenged somebody. Please cancel that before challenging a new player.")
+        return
+    challenge_status.append(ctx.author.id)
     # Step 1: Initial Challenge Message
     challenge_embed = discord.Embed(title="Challenge Sent!",
                                     description=f"{ctx.author} has challenged {opponent.mention} to a duel!")
@@ -180,6 +188,7 @@ async def challenge(ctx, opponent: discord.Member):
     try:
         reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == ctx.author and str(r.emoji) in ["👍", "👎", "🚫"])
     except asyncio.TimeoutError:
+        challenge_status.remove(ctx.author.id)
         await ctx.send("Challenge expired.")
         return
 
@@ -191,8 +200,10 @@ async def challenge(ctx, opponent: discord.Member):
         await ctx.send("Challenge declined.")
     elif str(reaction.emoji) == "🚫":
         await ctx.send("Challenge canceled.")
+        challenge_status.remove(ctx.author.id)
 
     # Further steps (result selection, verification, database update) would follow here...
+
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
