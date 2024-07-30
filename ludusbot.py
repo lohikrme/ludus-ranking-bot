@@ -119,7 +119,7 @@ async def changeNickName(ctx, nickname):
 
     if is_registered_result:
         cursor = conn.cursor()
-        cursor.execute("SELECT nickname FROM players WHERE discord_id = %s", (str(ctx.author.id,)))
+        cursor.execute("SELECT nickname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
         old_nickname = cursor.fetchone()[0]
         cursor.execute("UPDATE players SET nickname = %s WHERE discord_id = %s", (nickname, str(ctx.author.id)))
         await ctx.send(f"Your nickname has been updated! Your old nickname was {old_nickname}. Your new nickname is {nickname}")
@@ -158,8 +158,7 @@ async def leaderboard(ctx):
 
 
 # TOP10 COMMAND
-@bot.slash_command(name="top10")
-#@bot.command()
+@bot.command()
 async def top10(ctx):
     await ctx.send("Printing points of top10 players starting...")
     
