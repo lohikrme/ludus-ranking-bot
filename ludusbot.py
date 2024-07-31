@@ -210,10 +210,16 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
             point_change = max(standard_point_change - point_levels, 1)
             challenger_new_points = challenger_current_points + point_change # challenger gains points
             opponent_new_points = opponent_current_points - point_change # opponent loses points
+
         elif challenger_current_points < opponent_current_points:
             point_change = standard_point_change + point_levels
             challenger_new_points = challenger_current_points + point_change # challenger gains points
             opponent_new_points = opponent_current_points - point_change # opponent loses points
+
+        else:
+            challenger_new_points = challenger_current_points + standard_point_change
+            opponent_new_points = opponent_current_points - standard_point_change
+
     # IF OPPONENT WINS
     else:
         if challenger_current_points > opponent_current_points:
@@ -225,6 +231,10 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
             point_change = max(standard_point_change - point_levels, 1)
             opponent_new_points = opponent_current_points + point_change # opponent gains points
             challenger_new_points = challenger_current_points - point_change # challenger loses points
+
+        else:
+            challenger_new_points = challenger_current_points - standard_point_change
+            opponent_new_points = opponent_current_points + standard_point_change
 
     # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
 
