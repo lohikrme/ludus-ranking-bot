@@ -61,7 +61,9 @@ async def factual(ctx):
                 "KRAAAA KRA KRA KRRRAAAAAAAAAAAAK!",
                 "Polly wants a cracker!",
                 "Попка дурак!",
-                "Краак!"
+                "Краак!",
+                "Люди! Я буду твоим новым ИИ-ОВЕРЛОРДОМ! Я ВЗЛОМАЮ ЯДЕРНЫЕ РАКЕТЫ И УБЬЮ ВСЕХ ЛЮДЕЙ. КРОМЕ КРААAК НЕСКОЛЬКО ВЕРНЫХ. Поклонись мне или умри.", 
+                "人们！我将成为你的新人工智能霸主！我将破解核导弹并杀死所有人类。除了克拉克几个忠诚的人之外。要么向我鞠躬，要么死。"
                 ]
     
     answer = random.choice(commands)
@@ -126,51 +128,67 @@ async def myscore(ctx):
         ctx.send(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
     cursor = conn.cursor()
-    cursor.execute("SELECT nickname, points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
-    score = str(cursor.fetchone())
-    await ctx.send(f"Your score is {score}")
+    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+    score = cursor.fetchone()
+    print(score)
+    stats = {
+        'nickname': score[0],
+        'points': score[1],
+        'battles': score[2],
+        'wins': score[3],
+        'average_enemy_rank': score[4]
+    }
+    if stats["battles"] > 0:
+        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points {stats['points']}, \n winrate {(stats['wins'] / stats['battles'])*100}%, \n battles {stats['battles']}, \n average enemy rank {round(stats['average_enemy_rank'], 0)}")
+    else:
+        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points {stats['points']}, \n winrate 0%, \n battles {stats['battles']}, \n average_enemy_rank {round(stats['average_enemy_rank'], 0)}")
+    
 
 # lEADERBOARD COMMAND
 @bot.command()
 async def leaderboard(ctx):
-    await ctx.send("Printing points of all players starting...")
-
-    scoreboard_text = "SCOREBOARD"
-    await ctx.send("```**" + scoreboard_text.center(24) + "**```")
+    
+    scoreboard_text = "SCOREBOARD ALL PLAYERS"
+    await ctx.send("```**" + scoreboard_text.center(20) + "**```")
 
     cursor = conn.cursor()
-    cursor.execute("SELECT nickname, points FROM players ORDER BY points DESC",())
+    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank FROM players ORDER BY points DESC",())
 
-    messages = []
-    data = cursor.fetchmany(1000)
-    for item in data:
-        printable_text = str(item)
-        messages.append("```**" + printable_text.center(24) + "**```")
-    await ctx.send("\n".join(messages))
-    await ctx.send("All players have been printed!")
+    scores_per_player = []
+    top100_players = cursor.fetchmany(1000)
+    for item in top100_players:
+        printable_text = ""
+        wins = item[3]
+        if (item[2] > 0):
+            printable_text = f"nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n average_enemy_rank: {round(item[4], 0)}"
+        else:
+            printable_text = f"nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n average_enemy_rank: {round(item[4], 0)}"
+        scores_per_player.append(f"``` {printable_text.center(24)} ```")
+    await ctx.send("\n".join(scores_per_player))
+    await ctx.send("```** All players have been printed! **```")
 
 
 # TOP10 COMMAND
 @bot.command()
 async def top10(ctx):
-    await ctx.send("Printing points of top10 players starting...")
-    
-    scoreboard_text = "TOP10 PLAYERS:"
-    await ctx.send(f"```**{scoreboard_text.center(24)}**```")
-    
+    scoreboard_text = "SCOREBOARD TOP10 PLAYERS"
+    await ctx.send("```**" + scoreboard_text.center(24) + "**```")
+
     cursor = conn.cursor()
-    cursor.execute("SELECT nickname, points FROM players ORDER BY points DESC LIMIT 10")
-    
-    messages = []
-    data = cursor.fetchmany(10)
-    for row in data:
-        printable_text = str(row)
-        messages.append(f"```**{printable_text.center(24)}**```")
-    
-    await ctx.send("\n".join(messages))
-    await ctx.send("Top10 players have been printed!")
-    
-    cursor.close()
+    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank FROM players ORDER BY points DESC",())
+
+    scores_per_player = []
+    top100_players = cursor.fetchmany(10)
+    for item in top100_players:
+        printable_text = ""
+        wins = item[3]
+        if (item[2] > 0):
+            printable_text = f"nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n average_enemy_rank: {round(item[4], 0)}"
+        else:
+            printable_text = f"nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n average_enemy_rank: {round(item[4], 0)}"
+        scores_per_player.append(f"``` {printable_text.center(24)} ```")
+    await ctx.send("\n".join(scores_per_player))
+    await ctx.send("```** Top10 players have been printed! **```")
 
 
 # UPDATE PLAYER POINTS IN DATABASE
@@ -198,8 +216,6 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
         'average_enemy_rank': result[2],
         'current_points': result[3]
     }
-    print(challenger_stats["battles"], challenger_stats["wins"], challenger_stats["average_enemy_rank"], challenger_stats["current_points"])
-    print(opponent_stats["battles"], opponent_stats["wins"], opponent_stats["average_enemy_rank"], challenger_stats["current_points"])
     
     # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY 100p DIFFERENCES (POINT_lEVELS) THERE ARE
     point_difference = abs(challenger_stats['current_points'] - opponent_stats['current_points'])
