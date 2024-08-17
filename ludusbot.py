@@ -36,9 +36,8 @@ async def on_ready():
 # FACTUAL COMMAND
 @bot.command()
 async def factual(ctx):
-    commands = ["Chinese Parrot is a tier S duellist.", 
-                "Brownie and Parrot rule the ludus", 
-                "Shin is goat", 
+    commands = ["Chinese_Parrot is a tier S duellist.", 
+                "Askellot is the smartest warband player",
                 "Mount Blanc is the highest mountain of Europe not Elbrus",
                 "Camponotus herculeanus is the largest ant species of Europe",
                 "Petra and PSP are the ddossers",
@@ -47,24 +46,22 @@ async def factual(ctx):
                 "Rabbits despite their smaller size usually dominate larger hares when competing territory",
                 "The flying squirrel is a cute fluffy mammal that glides from tree to tree, eats leaves, and is protected by the EU directive",
                 "Psychopaths don't feel anxiety or remorse.",
-                "Top 5 players of ludus are: Maximou, Totenflag, Parrot, Shin, Nerji",
                 "Perch (Perca fluviatilis) is the most common fish in Europe",
                 "Crucian carp (Carassius carassius) is the most badass fish out there. They can survive months without breathing during the harsh winters when small lakes freeze all the way to bottom.",
                 "The origin of house cat is in the African wild cats (Felis sylvestris lybica)",
                 "Most kinds of evolution are actually devolution - loss of genetic material. This is how dogs or MRSA developed.",
-                "The heaviest sumo ever was Orora weighting up to 292kg with a height of 190cm",
+                "The heaviest sumo ever was Orora from Russia, weighting up to 292kg with a height of 190cm",
                 "Some parrots such as cockatoos, macaws and conures can produce up to 135 decibel sound and induce immediate hearing damage to humans.",
                 "Airplane gasolin still contains lead in 2024 because the gasolin freezes so much in the air that ethanol cannot be used. Living nearby airfields can therefore be dangerous.",
-                "Nergi is smartest ludus player",
-                "Busbyy (BSB) is the secret name of PSP",
                 "KRAAAK!",
                 "Kraak",
                 "Kraa",
                 "KRAAA!",
                 "KRAAAAK KRAAK!",
                 "KRAAAA KRA KRA KRRRAAAAAAAAAAAAK!",
-                "Polly wants a cracker!"
-
+                "Polly wants a cracker!",
+                "Попка дурак!",
+                "Краак!"
                 ]
     
     answer = random.choice(commands)
@@ -91,7 +88,7 @@ async def register(ctx, nickname):
     # NOTIFY USER THEY ARE ALREADY REGISTERED
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
-        await ctx.send("You have already been registered! If you want to reset your rank, please contact Ludus admins.")
+        await ctx.send("You have already been registered! If you want to reset your rank, please contact admins.")
 
     # ADD A NEW USER
     else:
@@ -100,7 +97,7 @@ async def register(ctx, nickname):
         amount_of_lines = cursor.fetchone()[0]
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points) VALUES (%s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000))
+            cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points, battles, wins, average_enemy_rank) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000, 0, 0, 0))
             await ctx.send("Your discord username has successfully been registered into Ludus players!")
         else:
             await ctx.send("The database is full. This most likely means that the database has been attacked by a spammer. \n This will not endanger security, but limit makes sure database wont grow too large. Please contact Ludus admins.")
@@ -109,9 +106,6 @@ async def register(ctx, nickname):
 # CHANGENICKNAME COMMAND
 @bot.command()
 async def changeNickName(ctx, nickname):
-
-    # FETCH USER'S OFFICIAL DISCORD NAME
-    username = str(ctx.author.name)
 
     # IF USERNAME EXISTS, CHANGE THEIR NICKNAME
     is_registered_result = await is_registered(str(ctx.author.id))
@@ -184,71 +178,103 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
 
     # THESE CAN BE MODIFIED AS NEED
     standard_point_change = 30
-    level_factor = 2
 
     # FETCH CURRENT POINTS FROM DATABASE
     cursor = conn.cursor()
-    cursor.execute("SELECT points FROM players WHERE discord_id = %s", (str(challenger.id),))
-    challenger_current_points = cursor.fetchone()[0]
-    cursor.execute("SELECT points FROM players WHERE discord_id = %s", (str(opponent.id),))
-    opponent_current_points = cursor.fetchone()[0]
+
+    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s", (str(challenger.id),))
+    result = cursor.fetchone()
+    challenger_stats = {
+        'battles': result[0],
+        'wins': result[1],
+        'average_enemy_rank': result[2],
+        'current_points': result[3]
+    }
+    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s", (str(opponent.id),))
+    result = cursor.fetchone()
+    opponent_stats = {
+        'battles': result[0],
+        'wins': result[1],
+        'average_enemy_rank': result[2],
+        'current_points': result[3]
+    }
+    print(challenger_stats["battles"], challenger_stats["wins"], challenger_stats["average_enemy_rank"], challenger_stats["current_points"])
+    print(opponent_stats["battles"], opponent_stats["wins"], opponent_stats["average_enemy_rank"], challenger_stats["current_points"])
     
     # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY 100p DIFFERENCES (POINT_lEVELS) THERE ARE
-    point_difference = abs(challenger_current_points - opponent_current_points)
+    point_difference = abs(challenger_stats['current_points'] - opponent_stats['current_points'])
 
     point_levels = point_difference // 50
 
 
     # INITIATE NEW POINTS, AND THEN CALCULATE THE NEW POINTS BASED ON THE FORMULA
-    challenger_new_points = challenger_current_points
-    opponent_new_points = opponent_current_points
+    challenger_new_points = challenger_stats['current_points']
+    opponent_new_points = opponent_stats['current_points']
 
     # IF CHALLENGER WINS
     if challenger_win:
-        if challenger_current_points > opponent_current_points:
-            point_change = max(standard_point_change - point_levels, 1)
-            challenger_new_points = challenger_current_points + point_change # challenger gains points
-            opponent_new_points = opponent_current_points - point_change # opponent loses points
+        # update both players battles, wins, average_enemy_rank
+        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + opponent_stats["current_points"]) / (challenger_stats["battles"] + 1)
+        challenger_stats["battles"] = challenger_stats["battles"] + 1
+        challenger_stats["wins"] = challenger_stats["wins"] + 1
 
-        elif challenger_current_points < opponent_current_points:
+        opponent_stats["average_enemy_rank"] = (opponent_stats["battles"] * opponent_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (opponent_stats["battles"] + 1)
+        opponent_stats["battles"] = opponent_stats["battles"] + 1
+
+        # solve point change amount for both players
+        if challenger_stats['current_points'] > opponent_stats['current_points']:
+            point_change = max(standard_point_change - point_levels, 1)
+            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
+            opponent_new_points = opponent_stats['current_points'] - point_change # opponent loses points
+
+        elif challenger_stats['current_points'] < opponent_stats['current_points']:
             point_change = standard_point_change + point_levels
-            challenger_new_points = challenger_current_points + point_change # challenger gains points
-            opponent_new_points = opponent_current_points - point_change # opponent loses points
+            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
+            opponent_new_points = opponent_stats['current_points'] - point_change # opponent loses points
 
         else:
-            challenger_new_points = challenger_current_points + standard_point_change
-            opponent_new_points = opponent_current_points - standard_point_change
+            challenger_new_points = challenger_stats['current_points'] + standard_point_change
+            opponent_new_points = opponent_stats['current_points'] - standard_point_change
 
     # IF OPPONENT WINS
     else:
-        if challenger_current_points > opponent_current_points:
+        # update both players battles, wins, average_enemy_rank
+        opponent_stats["average_enemy_rank"] = (opponent_stats["battles"] * opponent_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (opponent_stats["battles"] + 1)
+        opponent_stats["battles"] = opponent_stats["battles"] + 1
+        opponent_stats["wins"] = opponent_stats["wins"] + 1
+
+        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + opponent_stats["current_points"]) / (challenger_stats["battles"] + 1)
+        challenger_stats["battles"] = challenger_stats["battles"] + 1
+
+        # solve point change amount for both players
+        if challenger_stats['current_points'] > opponent_stats['current_points']:
             point_change = standard_point_change + point_levels
-            opponent_new_points = opponent_current_points + point_change # opponent gains points
-            challenger_new_points = challenger_current_points - point_change # challenger loses points
+            opponent_new_points = opponent_stats['current_points'] + point_change # opponent gains points
+            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
             
-        elif challenger_current_points < opponent_current_points:
+        elif challenger_stats['current_points'] < opponent_stats['current_points']:
             point_change = max(standard_point_change - point_levels, 1)
-            opponent_new_points = opponent_current_points + point_change # opponent gains points
-            challenger_new_points = challenger_current_points - point_change # challenger loses points
+            opponent_new_points = opponent_stats['current_points'] + point_change # opponent gains points
+            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
 
         else:
-            challenger_new_points = challenger_current_points - standard_point_change
-            opponent_new_points = opponent_current_points + standard_point_change
+            challenger_new_points = challenger_stats['current_points'] - standard_point_change
+            opponent_new_points = opponent_stats['current_points'] + standard_point_change
 
     # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
 
     # update challenger points
-    cursor.execute("UPDATE players SET points = %s, old_points = %s WHERE discord_id = %s", (challenger_new_points, challenger_current_points, str(challenger.id),))
+    cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (challenger_stats['battles'], challenger_stats['wins'], challenger_stats['average_enemy_rank'], challenger_new_points, challenger_stats['current_points'], str(challenger.id),))
 
     # update opponent points
-    cursor.execute("UPDATE players SET points = %s, old_points = %s WHERE discord_id = %s", (opponent_new_points, opponent_current_points, str(opponent.id),))
+    cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (opponent_stats['battles'], opponent_stats['wins'], opponent_stats['average_enemy_rank'], opponent_new_points, opponent_stats['current_points'], str(opponent.id),))
 
 
     # FEEDBACK USERS OF THEIR OLD AND NEW POINTS
     new_scores_tittle = "***** NEW SCORES *****"
     await channel.send(f"{new_scores_tittle.center(24)}")
-    await channel.send(f"Challenger {challenger.mention} old_points are: {challenger_current_points}. \n Challenger {challenger.mention} new points are {challenger_new_points} \n")
-    await channel.send(f"Opponent {opponent.mention} old_points are: {opponent_current_points}. \n Opponent {opponent.mention} new points are {opponent_new_points}")
+    await channel.send(f"Challenger {challenger.mention} old_points are: {challenger_stats['current_points']}. \n Challenger {challenger.mention} new points are {challenger_new_points} \n")
+    await channel.send(f"Opponent {opponent.mention} old_points are: {opponent_stats['current_points']}. \n Opponent {opponent.mention} new points are {opponent_new_points}")
 
 
     return
