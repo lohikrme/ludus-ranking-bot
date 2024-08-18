@@ -36,7 +36,7 @@ async def on_ready():
 # FACTUAL COMMAND
 @bot.command()
 async def factual(ctx):
-    commands = ["Marchia[TianLong] is a tier S duellist.", 
+    facts = ["Marchia[TianLong] is a tier S duellist.", 
                 "Askellot is the smartest warband player",
                 "Mount Blanc is the highest mountain of Europe not Elbrus",
                 "Camponotus herculeanus is the largest ant species of Europe",
@@ -63,13 +63,13 @@ async def factual(ctx):
                 "人们！我将成为你的新人工智能霸主！我将破解核导弹并杀死所有人类。除了克拉克几个忠诚的人之外。要么向我鞠躬，要么死。",
                 ]
     
-    answer = random.choice(commands)
+    answer = random.choice(facts)
     await ctx.send(answer)
 
 
 @bot.command()
 async def факт(ctx):
-    commands = ["Marchia[TianLong] - дуэлянт уровня S.",
+    facts = ["Marchia[TianLong] - дуэлянт уровня S.",
                 "Askellot - самый умный игрок в варбанд.",
                 "Монблан - самая высокая гора Европы, а не Эльбрус.",
                 "Camponotus herculeanus - самый крупный вид муравьев в Европе.",
@@ -99,11 +99,8 @@ async def факт(ctx):
                 "Никогда не напоминай Грейнтвальдцу битву за Бан-Ард"
                 ]
     
-    answer = random.choice(commands)
+    answer = random.choice(facts)
     await ctx.send(answer)
-
-
-
 
 
 # USE THIS TO CHECK IF REGISTERED
@@ -136,9 +133,9 @@ async def register(ctx, nickname):
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
             cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points, battles, wins, average_enemy_rank) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000, 0, 0, 0))
-            await ctx.send("Your discord username has successfully been registered into Ludus players!")
+            await ctx.send("Your discord account has successfully been registered to participate ranked battles!")
         else:
-            await ctx.send("The database is full. This most likely means that the database has been attacked by a spammer. \n This will not endanger security, but limit makes sure database wont grow too large. Please contact Ludus admins.")
+            await ctx.send("The database is full. Please contact admins.")
 
 
 # CHANGENICKNAME COMMAND
