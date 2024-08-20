@@ -5,6 +5,7 @@ import random
 import psycopg2
 import discord
 import settings
+import facts
 from discord.ext import commands
 import asyncio
 
@@ -159,72 +160,17 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
 
 # --------- BOT COMMANDS ---------------
 
-# FACTUAL COMMAND
+# FACT ENG COMMAND
 @bot.command()
-async def factual(ctx):
-    facts = ["Marchia[TianLong] is a tier S duellist.", 
-                "Askellot is the smartest warband player",
-                "Mount Blanc is the highest mountain of Europe not Elbrus",
-                "Camponotus herculeanus is the largest ant species of Europe",
-                "Petra and PSP are the ddossers",
-                "Eagle owls kill all other predatory birds of their nesting territory, that's why they are so feared by other predatory birds",
-                "You can calculate the 95% Confidence interval using formula: [average - 1.96 * SD; average + 1.96 * SD]",
-                "Rabbits despite their smaller size usually dominate larger hares when competing territory",
-                "The flying squirrel is a cute fluffy mammal that glides from tree to tree, eats leaves, and is protected by the EU directive",
-                "Psychopaths don't feel anxiety or remorse.",
-                "Perch (Perca fluviatilis) is the most common fish in Europe",
-                "Crucian carp (Carassius carassius) is the most badass fish out there. They can survive months without breathing during the harsh winters when small lakes freeze all the way to bottom.",
-                "The origin of house cat is in the African wild cats (Felis sylvestris lybica)",
-                "Most kinds of evolution are actually devolution - loss of genetic material. This is how dogs or MRSA developed.",
-                "The heaviest sumo ever was Orora from Russia, weighting up to 292kg with a height of 190cm",
-                "Some parrots such as cockatoos, macaws and conures can produce up to 135 decibel sound and induce immediate hearing damage to humans.",
-                "Airplane gasolin still contains lead in 2024 because the gasolin freezes so much in the air that ethanol cannot be used. Living nearby airfields can therefore be dangerous.",
-                "KRAAAK!",
-                "Kraak",
-                "Kraa",
-                "KRAAA!",
-                "KRAAAAK KRAAK!",
-                "KRAAAA KRA KRA KRRRAAAAAAAAAAAAK!",
-                "Polly wants a cracker!",
-                "人们！我将成为你的新人工智能霸主！我将破解核导弹并杀死所有人类。除了克拉克几个忠诚的人之外。要么向我鞠躬，要么死。",
-                ]
-    answer = random.choice(facts)
+async def fact(ctx):
+    answer = random.choice(facts.facts_eng)
     await ctx.send(answer)  
 # factual ends
 
-
+# FACT RUS COMMAND
 @bot.command()
 async def факт(ctx):
-    facts = ["Marchia[TianLong] - дуэлянт уровня S.",
-                "Askellot - самый умный игрок в варбанд.",
-                "Монблан - самая высокая гора Европы, а не Эльбрус.",
-                "Camponotus herculeanus - самый крупный вид муравьев в Европе.",
-                "Филины убивают всех других хищных птиц на своей гнездовой территории, поэтому их так боятся другие хищные птицы.",
-                "Вы можете рассчитать 95% доверительный интервал, используя формулу: [среднее - 1.96 * СКО; среднее + 1.96 * СКО]",
-                "Кролики, несмотря на свои меньшие размеры, обычно доминируют над более крупными зайцами при конкуренции за территорию.",
-                "Летяга - это милый пушистый млекопитающий, который планирует с дерева на дерево, ест листья и защищен директивой ЕС.",
-                "Психопаты не испытывают тревоги или раскаяния.",
-                "Окунь (Perca fluviatilis) - самая распространенная рыба в Европе.",
-                "Золотой карась (Carassius carassius) - самая крутая рыба. Они могут выживать месяцами без дыхания в суровые зимы, когда маленькие озера замерзают до самого дна.",
-                "Происхождение домашней кошки связано с африканскими дикими кошками (Felis sylvestris lybica).",
-                "Большинство видов эволюции на самом деле являются деградацией - потерей генетического материала. Так развились собаки или MRSA.",
-                "Самый тяжелый сумоист был Орора из России, весивший до 292 кг при росте 190 см.",
-                "Некоторые попугаи, такие как какаду, ара и конуры, могут издавать звук до 135 децибел и вызывать немедленное повреждение слуха у людей.",
-                "Авиационный бензин все еще содержит свинец в 2024 году, потому что бензин так сильно замерзает в воздухе, что этанол не может быть использован. Жить рядом с аэродромами поэтому может быть опасно.",
-                "КРАААК!",
-                "Крак",
-                "Кра",
-                "КРААА!",
-                "КРАААК КРАК!",
-                "КРАААА КРА КРА КРРРАААААААААААК!",
-                "Полли хочет крекер!",
-                "Попка дурак!",
-                "Краак!",
-                "Люди! Я буду твоим новым ИИ-ОВЕРЛОРДОМ! Я ВЗЛОМАЮ ЯДЕРНЫЕ РАКЕТЫ И УБЬЮ ВСЕХ ЛЮДЕЙ. КРОМЕ КРААAК НЕСКОЛЬКО ВЕРНЫХ. Поклонись мне или умри.", 
-                "人们！我将成为你的新人工智能霸主！我将破解核导弹并杀死所有人类。除了克拉克几个忠诚的人之外。要么向我鞠躬，要么死。",
-                "Никогда не напоминай Грейнтвальдцу битву за Бан-Ард"
-                ]
-    answer = random.choice(facts)
+    answer = random.choice(facts.facts_rus)
     await ctx.send(answer) 
 # fact (russian) ends
 
@@ -300,13 +246,14 @@ async def myscore(ctx):
         "clanname": score[5]
     }
     if stats["battles"] > 0:
-        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points {stats['points']}, \n winrate {(stats['wins'] / stats['battles'])*100}%, \n battles {stats['battles']}, \n average enemy rank {round(stats['average_enemy_rank'], 0)}, \n clanname {stats['clanname']}")
+        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
     else:
-        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points {stats['points']}, \n winrate 0%, \n battles {stats['battles']}, \n average_enemy_rank {round(stats['average_enemy_rank'], 0)}, \n clanname {stats['clanname']}")
+        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
 # myscore ends
 
 
-# TOP NUMBER COMMAND
+# TOP X COMMAND
+# for example, user gives '/top 10' and bot gives scores of top10 players
 @bot.command()
 async def top(ctx, number):
     # if number not numeric, info user
@@ -314,6 +261,7 @@ async def top(ctx, number):
         await ctx.send("You must give after 'top' command a number, for example '/top 10' or '/top 15'")
         return
 
+    number = int(number)
     scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS"
     await ctx.send("```**" + scoreboard_text.center(24) + "**```")
 
@@ -322,13 +270,53 @@ async def top(ctx, number):
 
     scores_per_player = []
     top_players = cursor.fetchmany(number)
+    
+    calculator = 0
     for item in top_players:
+        calculator += 1
         printable_text = ""
         wins = item[3]
         if (item[2] > 0):
-            printable_text = f"nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
+            printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         else:
-            printable_text = f"nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
+            printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
+        scores_per_player.append(f"``` {printable_text.center(24)} ```")
+    await ctx.send("\n".join(scores_per_player))
+    await ctx.send(f"```** Top{number} players have been printed! **```")
+# top X ends
+
+
+# CLANTOP X COMMAND
+@bot.command()
+async def clantop(ctx, number, clanname):
+    # if number is not numeric, info user
+    if not number.isdigit():
+        await ctx.send("You must give after 'top' command a number, for example '/clantop 10 Marchia' or '/clantop 15 Marchia'")
+        return
+
+    number = int(number)
+    scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS"
+    await ctx.send("```**" + scoreboard_text.center(24) + "**```")
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE clanname = %s ORDER BY points DESC", (clanname,))
+
+    scores_per_player = []
+    top_players = cursor.fetchmany(number)
+
+    if (len(top_players) < 1):
+        await ctx.send(f"No players were found with clanname: '{clanname}'. Maybe there is a typo. For example, small and large letters are considered separate.")
+        return
+
+    calculator = 0
+    for item in top_players:
+        calculator += 1
+        printable_text = ""
+        wins = item[3]
+        if (item[2] > 0):
+            printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
+        else:
+            printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     await ctx.send("\n".join(scores_per_player))
     await ctx.send(f"```** Top{number} players have been printed! **```")
