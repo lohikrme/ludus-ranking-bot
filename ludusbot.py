@@ -7,9 +7,10 @@ import discord
 import settings
 import facts
 from discord.ext import commands
+from discord import app_commands
 import asyncio
 
-# GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '%'
+# GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '/'
 intents = discord.Intents.default()  
 intents.message_content = True 
 intents.members = True
@@ -158,21 +159,20 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
 
 
 
-# --------- BOT COMMANDS ---------------
+# ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
 
-# FACT ENG COMMAND
+# FACTUAL COMMAND
 @bot.command()
-async def fact(ctx):
-    answer = random.choice(facts.facts_eng)
+async def factual(ctx, language):
+    if (language.lower() == 'eng' or language.lower() == 'english'):
+        answer = random.choice(facts.facts_eng)
+    elif (language.lower() == 'rus' or language.lower() == 'russia' or language.lower() == 'russian'):
+        answer = random.choice(facts.facts_rus)
+    else:
+        await ctx.send(f"Given language {language} did not match language options. Try for example '/factual eng' or '/factual rus'.")
+        return
     await ctx.send(answer)  
 # factual ends
-
-# FACT RUS COMMAND
-@bot.command()
-async def факт(ctx):
-    answer = random.choice(facts.facts_rus)
-    await ctx.send(answer) 
-# fact (russian) ends
 
 
 # REGISTER COMMAND
@@ -198,9 +198,9 @@ async def register(ctx, nickname):
 # register ends
 
 
-# CHANGENICKNAME COMMAND
+# CHANGENICK COMMAND
 @bot.command()
-async def changeNickName(ctx, nickname):
+async def changenick(ctx, nickname):
     # IF USERNAME EXISTS IN DATABASE, CHANGE THEIR NICKNAME
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
@@ -212,9 +212,9 @@ async def changeNickName(ctx, nickname):
 # change nickname ends
 
 
-# CHANGECLANNAME COMMAND
+# CHANGECLAN COMMAND
 @bot.command()
-async def changeClanName(ctx, clanname):
+async def changeclan(ctx, clanname):
     # IF USER ID EXISTS IN DATABASE, CHANGE THEIR CLANNAME
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
@@ -236,7 +236,6 @@ async def myscore(ctx):
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
     score = cursor.fetchone()
-    print(score)
     stats = {
         'nickname': score[0],
         'points': score[1],
