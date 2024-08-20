@@ -10,6 +10,16 @@ from discord.ext import commands
 from discord import app_commands
 import asyncio
 
+# OPEN THE CONNECTION TO THE DATABASE
+conn = psycopg2.connect(
+        database = settings.db_name,
+        user = settings.db_user,
+        password = settings.db_password,
+        host = settings.db_host,
+        port = settings.db_port
+)
+conn.autocommit = True
+
 # GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '/'
 intents = discord.Intents.default()  
 intents.message_content = True 
@@ -17,21 +27,13 @@ intents.members = True
 
 bot = commands.Bot(command_prefix='/', intents=intents)  # use slash as start of command
 
-# OPEN THE CONNECTION TO THE DATABASE
-
-conn = psycopg2.connect(
-        database = settings.db_name,
-        user = settings.db_user,
-        password = settings.db_password,
-        host = settings.db_host,
-        port = settings.db_port
-    )
-conn.autocommit = True
-
 # BOT ENTERS THE CHANNEL
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    bot.tree.clear_commands(guild=None) 
+    await bot.tree.sync()
+    print("Slash commands have been cleared and updated.")
 
 
 # ------- PRIVATE VARIABLES -----------
@@ -147,7 +149,6 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
     # update opponent points
     cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (opponent_stats['battles'], opponent_stats['wins'], opponent_stats['average_enemy_rank'], opponent_new_points, opponent_stats['current_points'], str(opponent.id),))
 
-
     # FEEDBACK USERS OF THEIR OLD AND NEW POINTS
     new_scores_tittle = "***** NEW SCORES *****"
     await channel.send(f"{new_scores_tittle.center(24)}")
@@ -158,21 +159,33 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
 # update player points ends
 
 
-
-# ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
-
-# FACTUAL COMMAND
-@bot.command()
-async def factual(ctx, language):
-    if (language.lower() == 'eng' or language.lower() == 'english'):
+async def print_facts(ctx, language):
+    answer = ""
+    if (language.lower() == 'eng'):
         answer = random.choice(facts.facts_eng)
-    elif (language.lower() == 'rus' or language.lower() == 'russia' or language.lower() == 'russian'):
+    elif (language.lower() == 'rus'):
         answer = random.choice(facts.facts_rus)
     else:
         await ctx.send(f"Given language {language} did not match language options. Try for example '/factual eng' or '/factual rus'.")
         return
+    return await ctx.send(answer)  
+
+
+# ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
+
+# FACTUAL ENG COMMAND
+@bot.command()
+async def factual(ctx):
+    answer = random.choice(facts.facts_eng)
     await ctx.send(answer)  
-# factual ends
+# factual eng ends
+
+# FACTUAL ENG COMMAND
+@bot.command()
+async def фактически(ctx):
+    answer = random.choice(facts.facts_rus)
+    await ctx.send(answer)  
+# factual rus ends
 
 
 # REGISTER COMMAND
