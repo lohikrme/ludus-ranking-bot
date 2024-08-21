@@ -44,10 +44,6 @@ async def on_ready():
     print("Slash commands have been cleared and updated.")
 
 
-# ------- PRIVATE VARIABLES -----------
-challenge_status = []
-
-
 # -------- PRIVATE FUNCTIONS -----------
 
 # USE THIS TO CHECK IF REGISTERED
@@ -180,6 +176,42 @@ async def print_facts(ctx, language):
 
 
 # ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
+
+# LEARN COMMANDS IN ENGLISH
+@bot.command()
+async def learncommands(ctx):
+    commands_list = [
+        "```The commands of ludus-ranking-bot are next:```",
+        "```'/register nickname', \n e.g '/register Sauron', \n to register into player database to be able to earn rank```",
+        "```'/challenge @nickname', \n e.g '/challenge @Sauron', \n to challenge another player in duel, winner gains ranking points, loser loses points ```",
+        "```'/changenick nickname' \n e.g  '/changenick Sauron', \n to change your nickname in your statistics```",
+        "```'/changeclan clanname' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
+        "```'/myscore' \n to print own statistics```",
+        "```'/top number' \n e.g  '/top 10', \n to print top players from any clan```",
+        "```'/clantop number clanname' \n e.g  '/clantop 3 Marchia', \n to print top players of a single clan```",
+        "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
+        "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
+    ]
+    await ctx.send("\n".join(commands_list))
+
+# LEARN COMMANDS IN RUSSIAN
+@bot.command()
+async def изучатькоманды(ctx):
+    commands_list = [
+        "```Команды ludus-ranking-bot следующие:```",
+        "```'/register прозвище', \n например '/register Sauron', \n чтобы зарегистрироваться в базе данных игроков и иметь возможность зарабатывать рейтинг```",
+        "```'/challenge прозвище', \n например '/challenge @Sauron', \n чтобы вызвать другого игрока на дуэль, победитель получает очки рейтинга, проигравший теряет очки```",
+        "```'/changenick @прозвище' \n например '/changenick Sauron', \n чтобы изменить свой никнейм в статистике```",
+        "```'/changeclan названиеклана' \n например '/changeclan Legion', \n по умолчанию имя клана пустое, поэтому вы добавляете имя клана с помощью этой команды. также можно изменить имя клана с помощью этой команды.```",
+        "```'/myscore' \n чтобы вывести свою статистику```",
+        "```'/top число' \n например '/top 10', \n чтобы вывести топ игроков из любого клана```",
+        "```'/clantop число названиеклана' \n например '/clantop 3 Marchia', \n чтобы вывести топ игроков одного клана```",
+        "```'/фактически' \n печатает интересные факты из самых разных тем. также полезно проверить, активен ли бот.```",
+        "```'/изучатькоманды' \n обучает командам ludus-ranking-bot на английском языке.```"
+    ]
+    await ctx.send("\n".join(commands_list))
+
+
 
 # FACTUAL ENG COMMAND
 @bot.command()
@@ -344,6 +376,7 @@ async def clantop(ctx, number, clanname):
 
 
 # CHALLENGE COMMAND
+challenge_status = []
 @bot.command()
 async def challenge(ctx, opponent: discord.Member):
     global challenge_status
@@ -424,7 +457,6 @@ async def challenge(ctx, opponent: discord.Member):
         await ctx.send("Challenge canceled.")
         challenge_status.remove(ctx.author.id)
 # challenge ends
-
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
