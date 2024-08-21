@@ -7,7 +7,6 @@ import discord
 import settings
 import facts
 from discord.ext import commands
-from discord import app_commands
 import asyncio
 
 # OPEN THE CONNECTION TO THE DATABASE
@@ -25,22 +24,18 @@ intents = discord.Intents.default()
 intents.message_content = True 
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)  # use ! as start of command
+bot = commands.Bot(command_prefix='/', intents=intents)  # use slash as start of command
 
 guilds = [
-    '1060303582487908423', # middle-earth
-    '1194360639544635482' # legion
+    1060303582487908423, # middle-earth
+    1194360639544635482 # legion
 ]
 
 # BOT ENTERS THE CHANNEL
 @bot.event
-async def on_ready():
+async def on_connect():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
-    for guild_id in guilds:
-        guild = discord.Object(id=guild_id)
-        bot.tree.clear_commands(guild=guild)
-        await bot.tree.sync(guild=guild)
-    await bot.tree.sync()
+    await bot.sync_commands(guild_ids=guilds)
     print("Slash commands have been cleared and updated.")
 
 
@@ -179,25 +174,7 @@ async def print_facts(ctx, language):
 
 
 # SLASH COMMAND VERSION OF LEARN COMMANDS IN ENGLISH
-@bot.tree.command(name="learncommands")
-async def learncommands(interaction: discord.Interaction):
-    commands_list = [
-        "```The commands of ludus-ranking-bot are next:```",
-        "```'/register nickname', \n e.g '/register Sauron', \n to register into player database to be able to earn rank```",
-        "```'/challenge @nickname', \n e.g '/challenge @Sauron', \n to challenge another player in duel, winner gains ranking points, loser loses points ```",
-        "```'/changenick nickname' \n e.g  '/changenick Sauron', \n to change your nickname in your statistics```",
-        "```'/changeclan clanname' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
-        "```'/myscore' \n to print own statistics```",
-        "```'/top number' \n e.g  '/top 10', \n to print top players from any clan```",
-        "```'/clantop number clanname' \n e.g  '/clantop 3 Marchia', \n to print top players of a single clan```",
-        "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
-        "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
-    ]
-    await interaction.response.send_message("\n".join(commands_list))
-
-
-# LEARN COMMANDS IN ENGLISH
-@bot.command()
+@bot.slash_command(name="learncommands", description="Teaches commands of ludus-ranking-bot with English.")
 async def learncommands(ctx):
     commands_list = [
         "```The commands of ludus-ranking-bot are next:```",
@@ -211,10 +188,11 @@ async def learncommands(ctx):
         "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
         "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
     ]
-    await ctx.send("\n".join(commands_list))
+    await ctx.respond("\n".join(commands_list))
+
 
 # LEARN COMMANDS IN RUSSIAN
-@bot.command()
+@bot.slash_command(name="изучатькоманды", description="обучает командам ludus-ranking-bot на английском языке.")
 async def изучатькоманды(ctx):
     commands_list = [
         "```Команды ludus-ranking-bot следующие:```",
@@ -228,7 +206,7 @@ async def изучатькоманды(ctx):
         "```'/факт' \n печатает интересные факты из самых разных тем. также полезно проверить, активен ли бот.```",
         "```'/изучатькоманды' \n обучает командам ludus-ranking-bot на английском языке.```"
     ]
-    await ctx.send("\n".join(commands_list))
+    await ctx.respond("\n".join(commands_list))
 
 
 
@@ -241,7 +219,7 @@ async def factual(ctx):
 
 # FACTUAL ENG COMMAND
 @bot.command()
-async def фактически(ctx):
+async def факт(ctx):
     answer = random.choice(facts.facts_rus)
     await ctx.send(answer)  
 # factual rus ends

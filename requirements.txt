@@ -1,9 +1,21 @@
-pip install discord.py
-pip install discord-py-interactions
-pip install discord-py-slash-command
-pip install discord-typings
+# requirements.txt
+# 21th august 2024
 
-# discord.py               2.4.0
-# discord-py-interactions  5.13.1
-# discord-py-slash-command 4.2.1
-# discord-typings          0.9.0
+# you can download the requirements using:
+# pip install -r requirements.txt
+
+# alternatively u can do it separately:
+# pip install -U py-cord
+# pip install discord-typings
+# pip install psycopg2
+
+# after installation check ur libraries using:
+# 'pip list'
+
+# python version:
+python_version >= 3.8
+
+# required libraries
+py-cord==2.6.0
+discord-typings==0.9.0
+psycopg2==2.9.9
