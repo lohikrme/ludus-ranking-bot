@@ -27,11 +27,19 @@ intents.members = True
 
 bot = commands.Bot(command_prefix='/', intents=intents)  # use slash as start of command
 
+guilds = [
+    '1060303582487908423', # middle-earth
+    '1194360639544635482' # legion
+]
+
 # BOT ENTERS THE CHANNEL
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
-    bot.tree.clear_commands(guild=None) 
+    for guild_id in guilds:
+        guild = discord.Object(id=guild_id)
+        bot.tree.clear_commands(guild=guild) 
+        await bot.tree.sync(guild=guild)
     await bot.tree.sync()
     print("Slash commands have been cleared and updated.")
 
