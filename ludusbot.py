@@ -54,6 +54,18 @@ async def is_registered(discord_id: str):
 # is registered ends
 
 
+# USE TO INFO USER OF EXISTING CLANNAMES
+async def fetchExistingClannames():
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT clanname FROM players", ())
+    clannames = cursor.fetchall()
+    current_clans = []
+    for item in clannames:
+        current_clans.append(item[0])
+    return current_clans
+# fetch existing clannames ends
+
+
 # UPDATE PLAYER POINTS IN DATABASE
 async def update_player_points(context, challenger, opponent, challenger_win: bool):
 
@@ -241,8 +253,8 @@ async def register(ctx, nickname: str):
         amount_of_lines = cursor.fetchone()[0]
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points, battles, wins, average_enemy_rank) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000, 0, 0, 0))
-            await ctx.respond("Your discord account has successfully been registered to participate ranked battles!")
+            cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points, battles, wins, average_enemy_rank, clanname) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000, 0, 0, 0, 'None'))
+            await ctx.respond(f"Your discord account has successfully been registered with the current nickname {nickname} to participate ranked games! You can later change your nickname if you want.")
         else:
             await ctx.respond("The database is full. Please contact admins.")
 # register ends
@@ -275,9 +287,14 @@ async def changeclan(ctx, clanname: str):
         cursor = conn.cursor()
         cursor.execute("SELECT clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
         old_clanname = cursor.fetchone()[0]
-        cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
-        await ctx.respond(f"Your clanname has been updated! Your old clanname was {old_clanname}. Your new clanname is {clanname}")
-        return
+        current_clans = await fetchExistingClannames()
+        if (clanname in current_clans):
+            cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
+            await ctx.respond(f"Your clanname has been updated! Your old clanname was {old_clanname}. Your new clanname is {clanname}")
+            return
+        else:
+            cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
+            await ctx.respond(f"Your clanname has been updated! \n Your old clanname was {old_clanname}. Your new clanname is {clanname}. \n Please note that the new clanname you chose is a new clanname. If you wanted to select a previously existing clanname, try one of these: \n {current_clans}")
     else:
         ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
@@ -354,7 +371,9 @@ async def clantop(ctx, number: int, clanname: str):
     top_players = cursor.fetchmany(number)
 
     if (len(top_players) < 1):
-        await ctx.send(f"No players were found with clanname: '{clanname}'. Maybe there is a typo. For example, small and large letters are considered separate.")
+        await ctx.send(f"```No players were found with clanname: '{clanname}'. Maybe there is a typo. For example, small and large letters are considered separate.```")
+        current_clans = await fetchExistingClannames()
+        await ctx.send(f"```Currently existing clannames are: \n {current_clans}```")
         return
 
     calculator = 0
@@ -368,8 +387,8 @@ async def clantop(ctx, number: int, clanname: str):
             printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     await ctx.send("\n".join(scores_per_player))
-    await ctx.send(f"```** Top{number} players have been printed! **```")
-# top X ends
+    await ctx.send(f"```** Top{number} players of {clanname} have been printed! **```")
+# clantop X ends
 
 
 # CHALLENGE COMMAND

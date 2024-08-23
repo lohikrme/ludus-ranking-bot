@@ -15,5 +15,5 @@ CREATE TABLE players (
     battles INT DEFAULT 0 NOT NULL,
     wins INT DEFAULT 0 NOT NULL,
     average_enemy_rank NUMERIC(12, 6) DEFAULT 0.000000 NOT NULL,
-    clanname VARCHAR(100) DEFAULT NULL
+    clanname VARCHAR(100) DEFAULT 'NONE' NOT NULL
 );
