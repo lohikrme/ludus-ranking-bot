@@ -55,7 +55,7 @@ async def is_registered(discord_id: str):
 
 
 # UPDATE PLAYER POINTS IN DATABASE
-async def update_player_points(channel, challenger, opponent, challenger_win: bool):
+async def update_player_points(context, challenger, opponent, challenger_win: bool):
 
     # THESE CAN BE MODIFIED AS NEED
     standard_point_change = 30
@@ -150,9 +150,9 @@ async def update_player_points(channel, challenger, opponent, challenger_win: bo
 
     # FEEDBACK USERS OF THEIR OLD AND NEW POINTS
     new_scores_tittle = "***** NEW SCORES *****"
-    await channel.send(f"{new_scores_tittle.center(24)}")
-    await channel.send(f"Challenger {challenger.mention} old_points are: {challenger_stats['current_points']}. \n Challenger {challenger.mention} new points are {challenger_new_points} \n")
-    await channel.send(f"Opponent {opponent.mention} old_points are: {opponent_stats['current_points']}. \n Opponent {opponent.mention} new points are {opponent_new_points}")
+    await context.send(f"{new_scores_tittle.center(24)}")
+    await context.send(f"Challenger {challenger.mention} old_points are: {challenger_stats['current_points']}. \n Challenger {challenger.mention} new points are {challenger_new_points} \n")
+    await context.send(f"Opponent {opponent.mention} old_points are: {opponent_stats['current_points']}. \n Opponent {opponent.mention} new points are {opponent_new_points}")
 
     return 
 # update player points ends
@@ -184,7 +184,7 @@ async def learncommands(ctx):
         "```'/changeclan clanname' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
         "```'/myscore' \n to print own statistics```",
         "```'/top number' \n e.g  '/top 10', \n to print top players from any clan```",
-        "```'/clantop number clanname' \n e.g  '/clantop 3 Marchia', \n to print top players of a single clan```",
+        "```'/clantop number clanname' \n e.g  '/clantop 3 Marchia', \n to print top players of a single clan.```",
         "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
         "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
     ]
@@ -211,29 +211,29 @@ async def изучатькоманды(ctx):
 
 
 # FACTUAL ENG COMMAND
-@bot.command()
+@bot.slash_command(name="factual", description="Bot will tell interesting facts")
 async def factual(ctx):
     answer = random.choice(facts.facts_eng)
-    await ctx.send(answer)  
+    await ctx.respond(answer)  
 # factual eng ends
 
 # FACTUAL ENG COMMAND
-@bot.command()
+@bot.slash_command(name="факт", description="Бот расскажет интересные факты")
 async def факт(ctx):
     answer = random.choice(facts.facts_rus)
-    await ctx.send(answer)  
+    await ctx.respond(answer)  
 # factual rus ends
 
 
 # REGISTER COMMAND
-@bot.command()
-async def register(ctx, nickname):
+@bot.slash_command(name="register", description="Register to player database")
+async def register(ctx, nickname: str):
     # FETCH USER'S OFFICIAL DISCORD NAME
     username = str(ctx.author.name)
     # NOTIFY USER THEY ARE ALREADY REGISTERED
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
-        await ctx.send("You have already been registered! If you want to reset your rank, please contact admins.")
+        await ctx.respond("You have already been registered! If you want to reset your rank, please contact admins.")
     # ADD A NEW USER
     else:
         cursor = conn.cursor()
@@ -242,15 +242,15 @@ async def register(ctx, nickname):
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
             cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points, battles, wins, average_enemy_rank) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000, 0, 0, 0))
-            await ctx.send("Your discord account has successfully been registered to participate ranked battles!")
+            await ctx.respond("Your discord account has successfully been registered to participate ranked battles!")
         else:
-            await ctx.send("The database is full. Please contact admins.")
+            await ctx.respond("The database is full. Please contact admins.")
 # register ends
 
 
 # CHANGENICK COMMAND
-@bot.command()
-async def changenick(ctx, nickname):
+@bot.slash_command(name="changenick", description="Give yourself a new nickname")
+async def changenick(ctx, nickname: str):
     # IF USERNAME EXISTS IN DATABASE, CHANGE THEIR NICKNAME
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
@@ -258,13 +258,17 @@ async def changenick(ctx, nickname):
         cursor.execute("SELECT nickname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
         old_nickname = cursor.fetchone()[0]
         cursor.execute("UPDATE players SET nickname = %s WHERE discord_id = %s", (nickname, str(ctx.author.id)))
-        await ctx.send(f"Your nickname has been updated! Your old nickname was {old_nickname}. Your new nickname is {nickname}")
+        await ctx.respond(f"Your nickname has been updated! Your old nickname was {old_nickname}. Your new nickname is {nickname}")
+        return
+    else:
+        ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        return
 # change nickname ends
 
 
 # CHANGECLAN COMMAND
-@bot.command()
-async def changeclan(ctx, clanname):
+@bot.slash_command(name="changeclan", description="Give yourself a new clanname")
+async def changeclan(ctx, clanname: str):
     # IF USER ID EXISTS IN DATABASE, CHANGE THEIR CLANNAME
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
@@ -272,16 +276,20 @@ async def changeclan(ctx, clanname):
         cursor.execute("SELECT clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
         old_clanname = cursor.fetchone()[0]
         cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
-        await ctx.send(f"Your nickname has been updated! Your old clanname was {old_clanname}. Your new nickname is {clanname}")
+        await ctx.respond(f"Your clanname has been updated! Your old clanname was {old_clanname}. Your new clanname is {clanname}")
+        return
+    else:
+        ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        return
 # change clanname ends
 
 
 # MYSCORE COMMAND
-@bot.command()
+@bot.slash_command(name="myscore", description="Print your personal score and statistics")
 async def myscore(ctx):
-    is_registered_result = is_registered(str(ctx.author.id))
+    is_registered_result = await is_registered(str(ctx.author.id))
     if not is_registered_result:
-        ctx.send(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -295,24 +303,20 @@ async def myscore(ctx):
         "clanname": score[5]
     }
     if stats["battles"] > 0:
-        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
+        await ctx.respond(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
     else:
-        await ctx.send(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
+        await ctx.respond(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
 # myscore ends
 
 
 # TOP X COMMAND
 # for example, user gives '/top 10' and bot gives scores of top10 players
-@bot.command()
-async def top(ctx, number):
-    # if number not numeric, info user
-    if not number.isdigit():
-        await ctx.send("You must give after 'top' command a number, for example '/top 10' or '/top 15'")
-        return
+@bot.slash_command(name="top", description="Print top x players of all players")
+async def top(ctx, number: int):
 
     number = int(number)
     scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS"
-    await ctx.send("```**" + scoreboard_text.center(24) + "**```")
+    await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
 
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players ORDER BY points DESC",())
@@ -336,16 +340,12 @@ async def top(ctx, number):
 
 
 # CLANTOP X COMMAND
-@bot.command()
-async def clantop(ctx, number, clanname):
-    # if number is not numeric, info user
-    if not number.isdigit():
-        await ctx.send("You must give after 'top' command a number, for example '/clantop 10 Marchia' or '/clantop 15 Marchia'")
-        return
+@bot.slash_command(name="clantop", description="Print top x players of a specific clan")
+async def clantop(ctx, number: int, clanname: str):
 
     number = int(number)
-    scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS"
-    await ctx.send("```**" + scoreboard_text.center(24) + "**```")
+    scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS OF {clanname}"
+    await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
 
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE clanname = %s ORDER BY points DESC", (clanname,))
@@ -374,30 +374,31 @@ async def clantop(ctx, number, clanname):
 
 # CHALLENGE COMMAND
 challenge_status = []
-@bot.command()
+@bot.slash_command(name="challenge", description="Challenge enemy to duel!")
 async def challenge(ctx, opponent: discord.Member):
     global challenge_status
 
     # CHECK NOT CHALLENGE ONESELF
     if (opponent.id == ctx.author.id):
-        await ctx.send("You may not challenge yourself!")
+        await ctx.respond("You may not challenge yourself!")
         return
 
     # CHECK CHALLENGER AND OPPONENT ARE REGISTERED, OTHERWISE NOTIFY AND RETURN
     opponent_is_registered = await is_registered(str(opponent.id))
     if not opponent_is_registered:
-        await ctx.send(f"The opponent {opponent.mention} has not yet been registered. Ask him to register before duel.")
+        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered. Ask him to register before duel.")
         return
     
     challenger_is_registered = await is_registered(str(ctx.author.id))
     if not challenger_is_registered:
-        await ctx.send(f"The challenger {ctx.author.mention} has not yet been registered. Please register to be able to duel.")
+        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered. Please register to be able to duel.")
         return
     
     if (ctx.author.id in challenge_status):
-        await ctx.send(f"You {ctx.author.mention} have already challenged somebody. Please cancel that before challenging a new player.")
+        await ctx.respond(f"You {ctx.author.mention} have already challenged somebody. Please cancel that before challenging a new player.")
         return
     
+    await ctx.respond("Prosessing challenge...")
 
     challenge_status.append(ctx.author.id)
     # Step 1: Initial Challenge Message
@@ -433,7 +434,7 @@ async def challenge(ctx, opponent: discord.Member):
             reaction, user = await bot.wait_for('reaction_add', timeout=300.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
         except asyncio.TimeoutError:
             challenge_status.remove(ctx.author.id)
-            await ctx.send("FT7 expired.")
+            await ctx.respond("FT7 expired.")
             return
         
         if str(reaction.emoji) == "🗡️":
