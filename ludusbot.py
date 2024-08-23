@@ -290,11 +290,11 @@ async def changeclan(ctx, clanname: str):
         current_clans = await fetchExistingClannames()
         if (clanname in current_clans):
             cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
-            await ctx.respond(f"Your clanname has been updated! Your old clanname was {old_clanname}. Your new clanname is {clanname}")
+            await ctx.respond(f"```Your clanname has been updated! Your old clanname was {old_clanname}. Your new clanname is {clanname}```")
             return
         else:
             cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
-            await ctx.respond(f"Your clanname has been updated! \n Your old clanname was {old_clanname}. Your new clanname is {clanname}. \n Please note that the new clanname you chose is a new clanname. If you wanted to select a previously existing clanname, try one of these: \n {current_clans}")
+            await ctx.respond(f"```Your clanname has been updated! \n Your old clanname was {old_clanname}. Your new clanname is {clanname}. \n Please note that the new clanname you chose is a new clanname. If you wanted to select a previously existing clanname, try one of these: \n {current_clans}```")
     else:
         ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
@@ -306,7 +306,7 @@ async def changeclan(ctx, clanname: str):
 async def myscore(ctx):
     is_registered_result = await is_registered(str(ctx.author.id))
     if not is_registered_result:
-        ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        ctx.respond(f"```You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.```")
         return
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -320,9 +320,9 @@ async def myscore(ctx):
         "clanname": score[5]
     }
     if stats["battles"] > 0:
-        await ctx.respond(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
+        await ctx.respond(f"```Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}```")
     else:
-        await ctx.respond(f"Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}")
+        await ctx.respond(f"```Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}```")
 # myscore ends
 
 
