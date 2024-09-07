@@ -6,6 +6,7 @@ import psycopg2
 import discord
 import settings
 import facts
+import guides
 from discord.ext import commands
 import asyncio
 
@@ -31,7 +32,7 @@ guilds = [
     1194360639544635482 # legion
 ]
 
-leader_password = "Ao823jsd7KGRAAAAGK421&?!"
+leader_password = settings.leaderpassword
 
 
 # BOT ENTERS THE CHANNEL
@@ -177,50 +178,17 @@ async def update_player_points(context, challenger, opponent, challenger_win: bo
 
 # ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
 
-# SLASH COMMAND VERSION OF LEARN COMMANDS IN ENGLISH
+# GUIDE IN ENGLISH
 @bot.slash_command(name="learncommands", description="Teaches commands of ludus-ranking-bot with English.")
 async def learncommands(ctx):
-    commands_list = [
-        "```The commands of ludus-ranking-bot are next:```",
-        "```'/register', \n e.g '/register Sauron', \n to register into player database to be able to earn rank```",
-        "```'/clanregister, \n e.g '/clanregister Marchia' \n to register clan into clans database.```",
-        "```'/challenge', \n e.g '/challenge @Sauron', \n to challenge another player in duel, winner gains ranking points, loser loses points ```",
-        "```'/changenick' \n e.g  '/changenick Sauron', \n to change your nickname in your statistics```",
-        "```'/changeclan' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
-        "```'/iamclanleader \n e.g '/iamclanleader 12345osman', \n become a clanleader to be able to announce events and report clanwar scores```",
-        "```'/printclanleaders \n e.g '/printclanleaders', \n print all clan leaders who have registered with '/iamclanleader'```",
-        "```'/reportclanwar \n e.g '/reportclanwar Legion 12 Valkyria 4' \n store information of clanwar scores into database ```",
-        "```'/eventannounce \n e.g '/eventannounce all clanwar Legion vs Valkuria saturday 19:00 CE!, \n bot private messages about event to all or specific role in channel.```",
-        "```'/myscore' \n to print own statistics```",
-        "```'/top' \n e.g  '/top 10', \n to print top players from any clan```",
-        "```'/topclanplayers' \n e.g  '/topclanplayers 3 Marchia', \n to print top players of a single clan.```",
-        "```'/clanleaderboard \n e.g '/clanleaderboard 10', \n print top clans in order.```",
-        "```'/clanwarhistory \n e.g '/clanwarhistory Legion', \n print clanwar scores of the selected clan. ```",
-        "```'/printclans' \n e.g '/printclans', \n print all existing clannames```",
-        "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
-        "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
-    ]
-    await ctx.respond("\n".join(commands_list))
+    await ctx.respond("\n".join(guides.guide_eng))
+# guide in english ends
 
-
-# LEARN COMMANDS IN RUSSIAN
+# GUIDE IN RUSSIAN
 @bot.slash_command(name="изучатькоманды", description="обучает командам ludus-ranking-bot на английском языке.")
 async def изучатькоманды(ctx):
-    commands_list = [
-        "```Команды ludus-ranking-bot следующие:```",
-        "```'/register прозвище', \n например '/register Sauron', \n чтобы зарегистрироваться в базе данных игроков и иметь возможность зарабатывать рейтинг```",
-        "```'/clanregister названиеклана, \n например '/clanregister Marchia' \n зарегистрировать клан в базе данных кланов.```",
-        "```'/challenge прозвище', \n например '/challenge @Sauron', \n чтобы вызвать другого игрока на дуэль, победитель получает очки рейтинга, проигравший теряет очки```",
-        "```'/changenick @прозвище' \n например '/changenick Sauron', \n чтобы изменить свой никнейм в статистике```",
-        "```'/changeclan названиеклана' \n например '/changeclan Legion', \n по умолчанию имя клана пустое, поэтому вы добавляете имя клана с помощью этой команды. также можно изменить имя клана с помощью этой команды.```",
-        "```'/myscore' \n чтобы вывести свою статистику```",
-        "```'/top число' \n например '/top 10', \n чтобы вывести топ игроков из любого клана```",
-        "```'/topclanplayers число названиеклана' \n например '/topclanplayers 3 Marchia', \n чтобы вывести топ игроков одного клана```",
-        "```'/факт' \n печатает интересные факты из самых разных тем. также полезно проверить, активен ли бот.```",
-        "```'/изучатькоманды' \n обучает командам ludus-ranking-bot на английском языке.```"
-    ]
-    await ctx.respond("\n".join(commands_list))
-
+    await ctx.respond("\n".join(guides.guide_rus))
+# guide in russian ends
 
 
 # FACTUAL ENG COMMAND
@@ -276,7 +244,7 @@ async def changenick(ctx, nickname: str):
     else:
         ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
-# change nickname ends
+# changenick ends
 
 
 # PRINTCLANS COMMAND
@@ -318,7 +286,7 @@ async def changeclan(ctx, new_clanname: str):
     else:
         await ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
-# change clanname ends
+# changeclan ends
 
 # ADD CLAN COMMAND
 @bot.slash_command(name="registerclan", description="Give yourself a new clanname")
@@ -335,6 +303,7 @@ async def registerclan(ctx, clanname: str):
     cursor.execute("INSERT INTO clans (clanname) VALUES (%s)", (clanname,))
     await ctx.respond(f"The clan {clanname} has been registered as a new clan!")
     return
+# registerclan ends
 
 
 # MYSCORE COMMAND
@@ -379,9 +348,9 @@ async def top(ctx, number: int):
                    LEFT JOIN clans ON players.clan_id = clans.id 
                    ORDER BY points DESC""",())
 
-    scores_per_player = []
     top_players = cursor.fetchmany(number)
     
+    scores_per_player = []
     calculator = 0
     for item in top_players:
         calculator += 1
@@ -396,13 +365,12 @@ async def top(ctx, number: int):
 # top X ends
 
 
-# CLANTOP X COMMAND
+# TOPCLANPLAYERS COMMAND
 @bot.slash_command(name="topclanplayers", description="Print top players of a specific clan")
 async def topclanplayers(ctx, number: int, clanname: str):
 
     clanname = clanname.lower()
     current_clans = await fetchExistingClannames()
-
     if clanname not in current_clans:
         await ctx.respond(f"```The clan {clanname} is not currently part of existing clans.```")
         await ctx.send(f"```Existing clans are: \n {current_clans}```")
@@ -420,7 +388,6 @@ async def topclanplayers(ctx, number: int, clanname: str):
                    WHERE clans.clanname = %s
                    ORDER BY points DESC""",(clanname,))
 
-    scores_per_player = []
     top_players = cursor.fetchmany(number)
 
     if (len(top_players) < 1):
@@ -428,6 +395,7 @@ async def topclanplayers(ctx, number: int, clanname: str):
         await ctx.send(f"```Currently existing clannames are: \n {current_clans}```")
         return
 
+    scores_per_player = []
     calculator = 0
     for item in top_players:
         calculator += 1
@@ -439,27 +407,23 @@ async def topclanplayers(ctx, number: int, clanname: str):
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     await ctx.send("\n".join(scores_per_player))
     await ctx.send(f"```** Top{number} players of {clanname} have been printed! **```")
-# clantop X ends
+# topclanplayers ends
 
 
 # CLAN LEADERBOARD COMMAND
-# TOP X COMMAND
-# for example, user gives '/top 10' and bot gives scores of top10 players
+# for example, user gives '/clanleaderboard 10' and bot gives scores of top10 clans
 @bot.slash_command(name="clanleaderboard", description="Print top clans in order")
 async def clanleaderboard(ctx, number: int):
-
-    number = int(number)
     scoreboard_text = f"LEADERBOARD TOP{number} CLANS"
     await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
-
+    number = int(number)
     cursor = conn.cursor()
     cursor.execute("""SELECT clanname, points, battles, wins, average_enemyclan_rank
                    FROM clans
                    ORDER BY points DESC""",())
+    top_clans = cursor.fetchmany(number)
 
     scores_per_clan = []
-    top_clans = cursor.fetchmany(number)
-    
     calculator = 0
     for item in top_clans:
         calculator += 1
@@ -474,6 +438,7 @@ async def clanleaderboard(ctx, number: int):
 # clanleaderboard ends
 
 
+# CLANWARHISTORY COMMAND
 @bot.slash_command(name="clanwarhistory", description="Print clanwar scores of the selected clan")
 async def clanwarhistory(ctx, clanname: str, number: int):
     clanname = clanname.lower()
@@ -506,12 +471,19 @@ async def clanwarhistory(ctx, clanname: str, number: int):
         await ctx.send("```If you think that there is a lack of information, please contact admins.```")
         await ctx.send(f"```Admins are supposed to use '/reportclanwar' to store scores received```")
         return
-    # clanwarhistory ends
+# clanwarhistory ends
     
 
 # REPORT CLANWAR COMMAND
 @bot.slash_command(name="reportclanwar", description="After war with enemy clan, write scores here!")
-async def reportclanwar(ctx):
+async def reportclanwar(ctx, year: int, month: int, day: int, challenger_clanname: str, challenger_score: str, defender_clanname: str, defender_score: str):
+    # step1: validate that ctx.author is a registered admin
+    # step2: validate date
+    # step3: validate challenger and defender clannames
+    # step4: if all previous is ok, store given data into clanwars datatable
+    # step5: solve, which clan won, and create a similar software to update clan's points as player points
+    #        so loser loses 30 +- factor, winner gains 30 +- factor
+    # step6: notify user of both clans new ranks, and that clanwars database has been updated (can see previous clanwar scores by using '/clanwarhistory')
     await ctx.respond("This command will be hard to do. i need to make sure both clans exist. I need to make sure there wont be douple reporting too.")
     await ctx.send("Also i will need to update not just clanwars datatable, but also clans datatable, and use already existing ranking system calculator for clans too...")
 # reportclanwar ends
@@ -557,7 +529,7 @@ async def eventannounce(ctx, title: str, date: str, description:str):
 # eventannounce ends
 
 
-# EVENTANNOUNCE COMMAND
+# IAMCLANLEADER COMMAND
 @bot.slash_command(name="iamclanleader", description="If you have password, use this to register as an admin or clanleader!")
 async def iamclanleader(ctx, password:str):
     if (password != leader_password):
@@ -576,6 +548,7 @@ async def iamclanleader(ctx, password:str):
 # iamclanleader ends
 
 
+# PRINTCLANLEADERS COMMAND
 @bot.slash_command(name="printclanleaders", description="Print all clan leaders who have registered with '/iamclanleader'!")
 async def printclanleaders(ctx):
     cursor = conn.cursor()
@@ -585,7 +558,7 @@ async def printclanleaders(ctx):
     for leader in allleadersdata:
         allleaders.append(leader[0])
     await ctx.respond(f"All currently registered leaders are: \n {allleaders}")
-
+# printclanleaders ends
 
 
 # CHALLENGE COMMAND
