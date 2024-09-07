@@ -1,43 +1,41 @@
 
-guide_eng = [
-        "```The commands of ludus-ranking-bot are next:```",
-        "```'/register', \n e.g '/register Sauron', \n to register into player database to be able to earn rank```",
-        "```'/clanregister, \n e.g '/clanregister Marchia' \n to register clan into clans database.```",
-        "```'/challenge', \n e.g '/challenge @Sauron', \n to challenge another player in duel, winner gains ranking points, loser loses points ```",
-        "```'/changenick' \n e.g  '/changenick Sauron', \n to change your nickname in your statistics```",
-        "```'/changeclan' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
-        "```'/iamclanleader \n e.g '/iamclanleader 12345osman', \n become a clanleader to be able to announce events and report clanwar scores```",
-        "```'/printclanleaders \n e.g '/printclanleaders', \n print all clan leaders who have registered with '/iamclanleader'```",
-        "```'/reportclanwar \n e.g '/reportclanwar Legion 12 Valkyria 4' \n store information of clanwar scores into database ```",
-        "```'/clanwarhistory \n e.g '/clanwarhistory Legion', \n print clanwar history of selected clan. ```",
-        "```'/eventannounce \n e.g '/eventannounce all clanwar Legion vs Valkuria saturday 19:00 CE!, \n bot private messages about event to all or specific role in channel.```",
-        "```'/myscore' \n to print own statistics```",
-        "```'/top' \n e.g  '/top 10', \n to print top players from any clan```",
-        "```'/topclanplayers' \n e.g  '/topclanplayers 3 Marchia', \n to print top players of a single clan.```",
-        "```'/clanleaderboard \n e.g '/clanleaderboard 10', \n print top clans in order.```",
-        "```'/printclans' \n e.g '/printclans', \n print all existing clannames```",
-        "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
-        "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
-]
+guide_eng = """```'Ludus ranking bot' has 3 basic functionalities:
+
+1. clans can gain rank by saving their clanwar scores using the '/reportclanwar' command.
+To do this, the clan must have an admin registered with the '/iamclanleader' command.
+If you need password for the command, ask from Legion clan.
+These scores can be printed with '/clanwarhistory' or '/clanleaderboard'.
+
+2. players can '/challenge' each others to gain ranking points.
+These scores can be printed with '/top' or '/topofclan'
+
+3. Admins can use the '/announce_event' command. 
+But beware, currently it will  directly message every clan member.```"""
 
 
-guide_rus = [
-    "```Команды ludus-ranking-bot следующие:```",
-    "```'/register', \n например '/register Sauron', \n для регистрации в базе данных игроков, чтобы иметь возможность зарабатывать ранг```",
-    "```'/clanregister, \n например '/clanregister Marchia' \n для регистрации клана в базе данных кланов.```",
-    "```'/challenge', \n например '/challenge @Sauron', \n чтобы вызвать другого игрока на дуэль, победитель получает очки рейтинга, проигравший теряет очки ```",
-    "```'/changenick' \n например  '/changenick Sauron', \n чтобы изменить свой никнейм в статистике```",
-    "```'/changeclan' \n например  '/changeclan Legion', \n по умолчанию имя клана пустое, поэтому вы добавляете имя клана с помощью этой команды. также можно изменить имя клана с помощью этой команды.```",
-    "```'/iamclanleader \n например '/iamclanleader 12345osman', \n стать лидером клана, чтобы иметь возможность объявлять события и сообщать результаты клановых войн```",
-    "```'/printclanleaders \n например '/printclanleaders', \n вывести всех лидеров кланов, которые зарегистрировались с помощью '/iamclanleader'```",
-    "```'/reportclanwar \n например '/reportclanwar Legion 12 Valkyria 4' \n сохранить информацию о результатах клановой войны в базе данных ```",
-    "```'/clanwarhistory \n например '/clanwarhistory Legion', \n вывести историю клановых войн выбранного клана. ```",
-    "```'/eventannounce \n например '/eventannounce all clanwar Legion vs Valkuria saturday 19:00 CE!, \n бот отправляет личные сообщения о событии всем или определенной роли в канале.```",
-    "```'/myscore' \n чтобы вывести свою статистику```",
-    "```'/top' \n например  '/top 10', \n чтобы вывести топ игроков из любого клана```",
-    "```'/topclanplayers' \n например  '/topclanplayers 3 Marchia', \n чтобы вывести топ игроков одного клана.```",
-    "```'/clanleaderboard \n например '/clanleaderboard 10', \n вывести топ кланов в порядке.```",
-    "```'/printclans' \n например '/printclans', \n вывести все существующие имена кланов```",
-    "```'/factual' \n выводит интересные факты на различные темы на английском языке. также полезно для проверки активности бота. ```",
-    "```'/learncommands' \n обучает командам ludus-ranking-bot на английском языке. ```"
-]
+guide_rus = """```‘Ludus ranking bot’ имеет 3 основные функции:
+
+1. кланы могут повышать свой ранг, сохраняя свои результаты клановых войн с помощью команды ‘/reportclanwar’. 
+Для этого у клана должен быть зарегистрированный администратор с помощью команды ‘/iamclanleader’. 
+Если вам нужен пароль для команды, спросите у клана Legion. 
+Эти результаты можно вывести с помощью команд ‘/clanwarhistory’ или ‘/clanleaderboard’.
+
+2. игроки могут ‘/challenge’ друг друга, чтобы получить очки рейтинга. 
+Эти результаты можно вывести с помощью команд ‘/top’ или ‘/topofclan’.
+
+3. администраторы могут использовать команду ‘/announce_event’. 
+Но будьте осторожны, в настоящее время она отправляет сообщение напрямую каждому члену клана.```"""
+
+
+guide_tr = """```'Ludus ranking bot' 3 temel işlevi vardır:
+
+1. klanlar, '/reportclanwar' komutunu kullanarak klan savaşı puanlarını kaydederek rütbe kazanabilirler.
+Bunu yapmak için, klanın '/iamclanleader' komutuyla kayıtlı bir yöneticisi olmalıdır.
+Komut için şifreye ihtiyacınız varsa, Legion klanından isteyin.
+Bu puanlar '/clanwarhistory' veya '/clanleaderboard' komutlarıyla yazdırılabilir.
+
+2. oyuncular, sıralama puanları kazanmak için birbirlerine '/challenge' yapabilirler.
+Bu puanlar '/top' veya '/topofclan' komutlarıyla yazdırılabilir.
+
+3. Yöneticiler '/announce_event' komutunu kullanabilirler.
+Ancak dikkat edin, şu anda bu komut doğrudan her klan üyesine mesaj gönderecektir.```"""

@@ -9,6 +9,7 @@ import facts
 import guides
 from discord.ext import commands
 import asyncio
+import datetime
 
 # OPEN THE CONNECTION TO THE DATABASE
 conn = psycopg2.connect(
@@ -62,7 +63,7 @@ async def is_registered(discord_id: str):
 # USE TO INFO USER OF EXISTING CLANNAMES
 async def fetchExistingClannames():
     cursor = conn.cursor()
-    cursor.execute("SELECT clanname FROM clans", ())
+    cursor.execute("SELECT name FROM clans", ())
     clannames = cursor.fetchall()
     current_clans = []
     for item in clannames:
@@ -71,15 +72,108 @@ async def fetchExistingClannames():
 # fetch existing clannames ends
 
 
+# UPDATE CLAN POINTS IN DATABASE
+async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, challenger_win: bool):
+    
+    # these can be updated as need
+    standard_point_change = 30
+
+    # fetch current points from database
+    cursor = conn.cursor()
+    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM clans WHERE id = %s", (challenger_clan_id,))
+    result = cursor.fetchone()
+    challenger_stats = {
+        'battles': result[0],
+        'wins': result[1],
+        'average_enemy_rank': result[2],
+        'current_points': result[3]
+    }
+    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM clans WHERE id = %s", (defender_clan_id,))
+    result = cursor.fetchone()
+    defender_stats = {
+        'battles': result[0],
+        'wins': result[1],
+        'average_enemy_rank': result[2],
+        'current_points': result[3]
+    }
+    
+    # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY 100p DIFFERENCES (POINT_lEVELS) THERE ARE
+    point_difference = abs(challenger_stats['current_points'] - defender_stats['current_points'])
+
+    point_levels = point_difference // 50
+
+    # INITIATE NEW POINTS, AND THEN CALCULATE THE NEW POINTS BASED ON THE FORMULA
+    challenger_new_points = challenger_stats['current_points']
+    defender_new_points = defender_stats['current_points']
+
+    # IF CHALLENGER WINS
+    if challenger_win:
+        # update both clans battles, wins, average_enemy_rank
+        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + defender_stats["current_points"]) / (challenger_stats["battles"] + 1)
+        challenger_stats["battles"] = challenger_stats["battles"] + 1
+        challenger_stats["wins"] = challenger_stats["wins"] + 1
+
+        defender_stats["average_enemy_rank"] = (defender_stats["battles"] * defender_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (defender_stats["battles"] + 1)
+        defender_stats["battles"] = defender_stats["battles"] + 1
+
+        # solve point change amount for both players
+        if challenger_stats['current_points'] > defender_stats['current_points']:
+            point_change = max(standard_point_change - point_levels, 1)
+            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
+            opponent_new_points = defender_stats['current_points'] - point_change # opponent loses points
+
+        elif challenger_stats['current_points'] < defender_stats['current_points']:
+            point_change = standard_point_change + point_levels
+            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
+            opponent_new_points = defender_stats['current_points'] - point_change # opponent loses points
+
+        else:
+            challenger_new_points = challenger_stats['current_points'] + standard_point_change
+            opponent_new_points = defender_stats['current_points'] - standard_point_change
+
+    # IF DEFENDER WINS
+    else:
+        # update both players battles, wins, average_enemy_rank
+        defender_stats["average_enemy_rank"] = (defender_stats["battles"] * defender_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (defender_stats["battles"] + 1)
+        defender_stats["battles"] = defender_stats["battles"] + 1
+        defender_stats["wins"] = defender_stats["wins"] + 1
+
+        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + defender_stats["current_points"]) / (challenger_stats["battles"] + 1)
+        challenger_stats["battles"] = challenger_stats["battles"] + 1
+
+        # solve point change amount for both players
+        if challenger_stats['current_points'] > defender_stats['current_points']:
+            point_change = standard_point_change + point_levels
+            opponent_new_points = defender_stats['current_points'] + point_change # opponent gains points
+            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
+            
+        elif challenger_stats['current_points'] < defender_stats['current_points']:
+            point_change = max(standard_point_change - point_levels, 1)
+            opponent_new_points = defender_stats['current_points'] + point_change # opponent gains points
+            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
+
+        else:
+            challenger_new_points = challenger_stats['current_points'] - standard_point_change
+            opponent_new_points = defender_stats['current_points'] + standard_point_change
+    
+    # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
+
+    # update challenger points
+    cursor.execute("UPDATE clans SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE id = %s", (challenger_stats['battles'], challenger_stats['wins'], challenger_stats['average_enemy_rank'], challenger_new_points, challenger_stats['current_points'], challenger_clan_id,))
+    # update defender points
+    cursor.execute("UPDATE clans SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE id = %s", (defender_stats['battles'], defender_stats['wins'], defender_stats['average_enemy_rank'], opponent_new_points, defender_stats['current_points'], defender_clan_id,))
+    return 
+# update clan points ends
+
+
 # UPDATE PLAYER POINTS IN DATABASE
 async def update_player_points(context, challenger, opponent, challenger_win: bool):
 
-    # THESE CAN BE MODIFIED AS NEED
+    # these can be updated as need
     standard_point_change = 30
 
-    # FETCH CURRENT POINTS FROM DATABASE
+    # fetch current points from database
     cursor = conn.cursor()
-
     cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s", (str(challenger.id),))
     result = cursor.fetchone()
     challenger_stats = {
@@ -166,11 +260,10 @@ async def update_player_points(context, challenger, opponent, challenger_win: bo
     cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (opponent_stats['battles'], opponent_stats['wins'], opponent_stats['average_enemy_rank'], opponent_new_points, opponent_stats['current_points'], str(opponent.id),))
 
     # FEEDBACK USERS OF THEIR OLD AND NEW POINTS
-    new_scores_tittle = "***** NEW SCORES *****"
-    await context.send(f"{new_scores_tittle.center(24)}")
-    await context.send(f"Challenger {challenger.mention} old_points are: {challenger_stats['current_points']}. \n Challenger {challenger.mention} new points are {challenger_new_points} \n")
-    await context.send(f"Opponent {opponent.mention} old_points are: {opponent_stats['current_points']}. \n Opponent {opponent.mention} new points are {opponent_new_points}")
-
+    if challenger_win:
+        await context.send(f"{challenger.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_stats['current_points']}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_stats['current_points'] - opponent_new_points})")
+    else:
+        await context.send(f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_stats['current_points']}) \n{challenger.mention} new points: {challenger_new_points}(-{challenger_stats['current_points'] - challenger_new_points})")
     return 
 # update player points ends
 
@@ -179,17 +272,22 @@ async def update_player_points(context, challenger, opponent, challenger_win: bo
 # ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
 
 # GUIDE IN ENGLISH
-@bot.slash_command(name="learncommands", description="Teaches commands of ludus-ranking-bot with English.")
-async def learncommands(ctx):
-    await ctx.respond("\n".join(guides.guide_eng))
+@bot.slash_command(name="guide", description="Teaches commands of ludus-ranking-bot with English.")
+async def guide(ctx):
+    await ctx.respond(guides.guide_eng)
 # guide in english ends
 
 # GUIDE IN RUSSIAN
-@bot.slash_command(name="изучатькоманды", description="обучает командам ludus-ranking-bot на английском языке.")
-async def изучатькоманды(ctx):
-    await ctx.respond("\n".join(guides.guide_rus))
+@bot.slash_command(name="гид", description="Обучает команды ludus-ranking-bot на русском языке.")
+async def гид(ctx):
+    await ctx.respond(guides.guide_rus)
 # guide in russian ends
 
+# GUIDE IN TURKISH
+@bot.slash_command(name="rehber", description="ludus-ranking-bot komutlarını İngilizce ile öğretir.")
+async def rehber(ctx):
+    await ctx.respond(guides.guide_tr)
+# guide in turkish ends
 
 # FACTUAL ENG COMMAND
 @bot.slash_command(name="factual", description="Bot will tell interesting facts")
@@ -204,6 +302,13 @@ async def факт(ctx):
     answer = random.choice(facts.facts_rus)
     await ctx.respond(answer)  
 # factual rus ends
+
+# FACTUAL TR COMMAND
+@bot.slash_command(name="gerçekler", description="Bot ilginç gerçekleri anlatacak")
+async def gerçekler(ctx):
+    answer = random.choice(facts.facts_tr)
+    await ctx.respond(answer)  
+# factual tr ends
 
 
 # REGISTER COMMAND
@@ -223,7 +328,7 @@ async def register(ctx, nickname: str):
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
             cursor.execute("INSERT INTO players (username, nickname, discord_id) VALUES (%s, %s, %s)", (username, nickname, str(ctx.author.id),))
-            await ctx.respond(f"Your discord account has successfully been registered with the current nickname {nickname} to participate ranked games! You can later change your nickname if you want.")
+            await ctx.respond(f"Your discord account has successfully been registered with nickname {nickname}! You can change your nickname with '/changenick' if you want.")
         else:
             await ctx.respond("The database is full. Please contact admins.")
 # register ends
@@ -242,7 +347,7 @@ async def changenick(ctx, nickname: str):
         await ctx.respond(f"Your nickname has been updated! Your old nickname was {old_nickname}. Your new nickname is {nickname}")
         return
     else:
-        ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        await ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
 # changenick ends
 
@@ -272,13 +377,13 @@ async def changeclan(ctx, new_clanname: str):
         cursor = conn.cursor()
         cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
         old_clan_id = cursor.fetchone()[0]
-        cursor.execute("SELECT clanname FROM clans WHERE id = %s", (old_clan_id,))
+        cursor.execute("SELECT name FROM clans WHERE id = %s", (old_clan_id,))
         old_clanname = cursor.fetchone()[0]
         if (new_clanname == old_clanname):
             await ctx.respond(f"You already belong to the clan {new_clanname}")
             return
         else:
-            cursor.execute("SELECT id FROM clans WHERE clanname = %s", (new_clanname,))
+            cursor.execute("SELECT id FROM clans WHERE name = %s", (new_clanname,))
             new_clan_id = cursor.fetchone()[0]
             cursor.execute("UPDATE players SET clan_id = (%s)", (new_clan_id,))
             await ctx.respond(f"Your clanname has been updated. Your old clanname was {old_clanname}. Your new clanname is {new_clanname}")
@@ -293,14 +398,14 @@ async def changeclan(ctx, new_clanname: str):
 async def registerclan(ctx, clanname: str):
     clanname = clanname.lower()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM clans WHERE clanname = %s", (clanname,))
+    cursor.execute("SELECT * FROM clans WHERE name = %s", (clanname,))
     existing_clan = cursor.fetchone()
 
     if existing_clan is not None:
         await ctx.respond(f"The clan {clanname} already exists")
         return
     
-    cursor.execute("INSERT INTO clans (clanname) VALUES (%s)", (clanname,))
+    cursor.execute("INSERT INTO clans (name) VALUES (%s)", (clanname,))
     await ctx.respond(f"The clan {clanname} has been registered as a new clan!")
     return
 # registerclan ends
@@ -311,7 +416,7 @@ async def registerclan(ctx, clanname: str):
 async def myscore(ctx):
     is_registered_result = await is_registered(str(ctx.author.id))
     if not is_registered_result:
-        ctx.respond(f"```You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.```")
+        await ctx.respond(f"```You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.```")
         return
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -324,7 +429,7 @@ async def myscore(ctx):
         'average_enemy_rank': score[4],
         "clan_id": score[5]
     }
-    cursor.execute("SELECT clanname FROM clans WHERE id = %s", (stats["clan_id"],))
+    cursor.execute("SELECT name FROM clans WHERE id = %s", (stats["clan_id"],))
     clanname = cursor.fetchone()[0]
     if stats["battles"] > 0:
         await ctx.respond(f"```Your {ctx.author.display_name} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {clanname}```")
@@ -343,7 +448,7 @@ async def top(ctx, number: int):
     await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
 
     cursor = conn.cursor()
-    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.clanname 
+    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.name 
                    FROM players 
                    LEFT JOIN clans ON players.clan_id = clans.id 
                    ORDER BY points DESC""",())
@@ -382,10 +487,10 @@ async def topclanplayers(ctx, number: int, clanname: str):
     await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
 
     cursor = conn.cursor()
-    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.clanname 
+    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.name 
                    FROM players 
                    LEFT JOIN clans ON players.clan_id = clans.id
-                   WHERE clans.clanname = %s
+                   WHERE clans.name = %s
                    ORDER BY points DESC""",(clanname,))
 
     top_players = cursor.fetchmany(number)
@@ -418,7 +523,7 @@ async def clanleaderboard(ctx, number: int):
     await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
     number = int(number)
     cursor = conn.cursor()
-    cursor.execute("""SELECT clanname, points, battles, wins, average_enemyclan_rank
+    cursor.execute("""SELECT name, points, battles, wins, average_enemy_rank
                    FROM clans
                    ORDER BY points DESC""",())
     top_clans = cursor.fetchmany(number)
@@ -451,14 +556,14 @@ async def clanwarhistory(ctx, clanname: str, number: int):
     
     # first fetch the id of given clan, so it will be easier to find all clanwars containing that id in challenger or defender
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM clans WHERE clanname = %s", (clanname,))
+    cursor.execute("SELECT id FROM clans WHERE name = %s", (clanname,))
     wanted_clan_id = cursor.fetchone()[0]
-    cursor.execute(""" SELECT clanwars.date, challenger_clan.clanname AS challenger_name, clanwars.challenger_won_rounds, defender_clan.clanname AS defender_name, clanwars.defender_won_rounds
+    cursor.execute(""" SELECT clanwars.date, challenger_clan.name AS challenger_name, clanwars.challenger_won_rounds, defender_clan.name AS defender_name, clanwars.defender_won_rounds
                     FROM clanwars
                     LEFT JOIN clans AS challenger_clan ON clanwars.challenger_clan_id = challenger_clan.id
                     LEFT JOIN clans AS defender_clan ON clanwars.defender_clan_id = defender_clan.id
                     WHERE challenger_clan.id = %s OR defender_clan.id = %s
-                    ORDER BY clanwars.date DESC""", (wanted_clan_id, wanted_clan_id,))
+                    ORDER BY clanwars.date DESC, clanwars.id DESC""", (wanted_clan_id, wanted_clan_id,))
     clanwars = cursor.fetchmany(number)
     if (len(clanwars) >= 1):
         await ctx.respond(f"```The last {number} clanwars of clan {clanname} had next scores:```")
@@ -469,7 +574,7 @@ async def clanwarhistory(ctx, clanname: str, number: int):
     else:
         await ctx.respond(f"```The clanwarhistory of clan {clanname} is currently empty!```")
         await ctx.send("```If you think that there is a lack of information, please contact admins.```")
-        await ctx.send(f"```Admins are supposed to use '/reportclanwar' to store scores received```")
+        await ctx.send(f"```Admins are supposed to use '/reportclanwar' to store clanwars```")
         return
 # clanwarhistory ends
     
@@ -477,15 +582,78 @@ async def clanwarhistory(ctx, clanname: str, number: int):
 # REPORT CLANWAR COMMAND
 @bot.slash_command(name="reportclanwar", description="After war with enemy clan, write scores here!")
 async def reportclanwar(ctx, year: int, month: int, day: int, challenger_clanname: str, challenger_score: str, defender_clanname: str, defender_score: str):
+    challenger_clanname = challenger_clanname.lower()
+    defender_clanname = defender_clanname.lower()
+    # store here date for storing into database
+    date = datetime.datetime(1900, 1, 1)
     # step1: validate that ctx.author is a registered admin
+    cursor = conn.cursor()
+    cursor.execute("SELECT discord_id FROM clanleaders WHERE discord_id = %s", (str(ctx.author.id),))
+    existing_leader = cursor.fetchone()
+    if existing_leader is None:
+        await ctx.respond("```Only admins registered with '/iamclanleader' can report clanwar scores!```")
+        return
     # step2: validate date
-    # step3: validate challenger and defender clannames
+    date_is_valid = True
+    try:
+        date = datetime.datetime(year, month, day)
+    except ValueError:
+        date_is_valid = False
+    if date_is_valid == False:
+        await ctx.respond("```The date you gave is not a real date. Please make sure the year, month and day are correct!```")
+        return
+    # step3: validate challenger and defender clannames and scores
+    existing_clans = await fetchExistingClannames()
+    if challenger_clanname not in existing_clans:
+        await ctx.respond(f"```The challenger_clanname {challenger_clanname} didn't match with existing clannames.```")
+        await ctx.send(f"```The currently existing clans are next: \n{existing_clans}```")
+        await ctx.send("```If the clanname is missing from the list, please use first '/registerclan' to add a new clan into database```")
+        return
+    
+    if defender_clanname not in existing_clans:
+        await ctx.respond(f"```The defender_clanname {defender_clanname} didn't match with existing clannames.```")
+        await ctx.send(f"```The currently existing clans are next: \n{existing_clans}```")
+        await ctx.send("If the clanname is missing from the list, please use first '/registerclan' to add a new clan into database")
+        return
+    
+    if challenger_score == defender_score:
+        await ctx.respond(f"```The challenger clan's score must be different to the defender clan's score, but now they are both {challenger_score} and {defender_score}. \nOnly one clan may win!```")
+        return
+    
     # step4: if all previous is ok, store given data into clanwars datatable
-    # step5: solve, which clan won, and create a similar software to update clan's points as player points
-    #        so loser loses 30 +- factor, winner gains 30 +- factor
+    cursor.execute("SELECT id from clans WHERE name = %s", (challenger_clanname,))
+    challenger_clan_id = cursor.fetchone()[0]
+    cursor.execute("SELECT id from clans WHERE name = %s", (defender_clanname,))
+    defender_clan_id = cursor.fetchone()[0]
+    cursor.execute("INSERT INTO clanwars (date, challenger_clan_id, defender_clan_id, challenger_won_rounds, defender_won_rounds) VALUES (%s, %s, %s, %s, %s)", (date, challenger_clan_id, defender_clan_id, challenger_score, defender_score,))
+
+    # step5: solve, which clan won, and update ranking point using update_clan_points function
+    challenger_won = False
+    if (challenger_score > defender_score):
+        challenger_won = True
+        await update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
+    else:
+        challenger_won = False
+        await update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
+
     # step6: notify user of both clans new ranks, and that clanwars database has been updated (can see previous clanwar scores by using '/clanwarhistory')
-    await ctx.respond("This command will be hard to do. i need to make sure both clans exist. I need to make sure there wont be douple reporting too.")
-    await ctx.send("Also i will need to update not just clanwars datatable, but also clans datatable, and use already existing ranking system calculator for clans too...")
+    cursor.execute("SELECT points, old_points FROM clans WHERE id = %s", (challenger_clan_id,))
+    challenger_stats = cursor.fetchone()
+    cursor.execute("SELECT points, old_points FROM clans WHERE id = %s", (defender_clan_id,))
+    defender_stats = cursor.fetchone()
+
+    if challenger_won:
+        # challenger won, so new points are bigger than old points
+        pointchange = challenger_stats[0] - challenger_stats[1]
+        message = f"```The {challenger_clanname} has won the clanwar against {defender_clanname} with scores {challenger_score}-{defender_score}!```"
+        await ctx.respond(message)
+        await ctx.send(f"```{challenger_clanname} new points: {challenger_stats[0]}(+{pointchange}). \n{defender_clanname} new points: {defender_stats[0]}(-{pointchange}).```")
+    else:
+        # challenger lost, so old points are bigger than new points
+        pointchange = challenger_stats[1] - challenger_stats[0] 
+        message = f"```The {defender_clanname} has won the clanwar against {challenger_clanname} with scores {defender_score}-{challenger_score}!```"
+        await ctx.respond(message)
+        await ctx.send(f"```{defender_clanname} new points: {defender_stats[0]}(+{pointchange}). \n{challenger_clanname} new points: {challenger_stats[0]}(-{pointchange}).```")
 # reportclanwar ends
 
 
@@ -496,9 +664,7 @@ async def eventannounce(ctx, title: str, date: str, description:str):
     cursor.execute("SELECT discord_id FROM clanleaders WHERE discord_id = %s", (str(ctx.author.id),))
     existing_leader = cursor.fetchone()
     if existing_leader is None:
-        await ctx.respond("```You are currently not eligible to announce events.```")
-        await ctx.send("```If you are a clan leader or clan admin, please contact Parrot.```")
-        await ctx.send("```Parrot will give you a password for '/iamclanleader' command to register as a clan leader.```")
+        await ctx.respond("```Only admins registered with '/iamclanleader' can announce events!```")
         return
     await ctx.respond(f"```{ctx.author.display_name}, I will help you to announce the event... \n. \n. \n```")
 
@@ -575,24 +741,24 @@ async def challenge(ctx, opponent: discord.Member):
     # CHECK CHALLENGER AND OPPONENT ARE REGISTERED, OTHERWISE NOTIFY AND RETURN
     opponent_is_registered = await is_registered(str(opponent.id))
     if not opponent_is_registered:
-        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered. Ask him to register before duel.")
+        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered.")
         return
     
     challenger_is_registered = await is_registered(str(ctx.author.id))
     if not challenger_is_registered:
-        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered. Please register to be able to duel.")
+        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered.")
         return
     
     if (ctx.author.id in challenge_status):
-        await ctx.respond(f"You {ctx.author.mention} have already challenged somebody. Please cancel that before challenging a new player.")
+        await ctx.respond(f"You {ctx.author.mention} have already challenged somebody.")
         return
     
-    await ctx.respond("Prosessing challenge...")
+    await ctx.respond(".")
 
     challenge_status.append(ctx.author.id)
     # Step 1: Initial Challenge Message
-    challenge_embed = discord.Embed(title="Challenge Sent!",
-                                    description=f"{ctx.author.mention} has challenged {opponent.mention} to a duel! {opponent.mention} should click swords emoticon if they want to accept the ft7!")
+    challenge_embed = discord.Embed(title="",
+                                    description=f"{ctx.author.mention} has challenged {opponent.mention} to ft7! \n⚔️accept    🚫decline")
     challenge_msg = await ctx.send(embed=challenge_embed)
 
     # Add reactions for Accept, Decline, Cancel
@@ -610,10 +776,8 @@ async def challenge(ctx, opponent: discord.Member):
 
     # Handle reactions
     if str(reaction.emoji) == "⚔️":
-        await ctx.send("Challenge accepted!")
-        
-        opponent_results_embed = discord.Embed(title="Opponent reports results!",
-        description=f"The opponent {opponent.mention} is supposed to answer this message! If challenger {ctx.author.mention} won press dagger emoticon! If opponent {opponent.mention} won press castle emoticon. If duel was cancelled press red emoticon.")
+        opponent_results_embed = discord.Embed(title="",
+        description=f"{opponent.mention} can select \n🗡️{ctx.author.display_name} won \n🏰{opponent.display_name} won \n🚫cancel.")
         opponent_msg = await ctx.send(embed=opponent_results_embed)
         await opponent_msg.add_reaction("🗡️") # challenger won
         await opponent_msg.add_reaction("🏰") # opponent won
@@ -628,15 +792,15 @@ async def challenge(ctx, opponent: discord.Member):
         
         if str(reaction.emoji) == "🗡️":
             challenge_status.remove(ctx.author.id)
-            await ctx.send(f"Challenger {ctx.author.mention} has won the duel against the opponent {opponent.mention}!")
+            await ctx.send(f"{ctx.author.display_name} has won against {opponent.display_name}!")
             await update_player_points(ctx, ctx.author, opponent, True)
         elif str(reaction.emoji) == "🏰":
             challenge_status.remove(ctx.author.id)
-            await ctx.send(f"Opponent {opponent.mention} has won the duel against the challenger {ctx.author.mention}!")
+            await ctx.send(f"{opponent.display_name} has won against {ctx.author.display_name}!")
             await update_player_points(ctx, ctx.author, opponent, False)
         elif str(reaction.emoji) == "🚫":
             challenge_status.remove(ctx.author.id)
-            await ctx.send(f"The FT7 has been cancelled between the challenger {ctx.author.mention} and the opponent {opponent.mention}!")
+            await ctx.send(f"The FT7 has been cancelled!")
 
 
         # Proceed to result selection

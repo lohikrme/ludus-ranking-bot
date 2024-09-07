@@ -19,16 +19,19 @@ CREATE TABLE players (
     clan_id INT DEFAULT 1);
 
 -- add one clan with id = 1, clanname = "none", points = 0, old_points = 0, average_enemyclan_rank = 0 at the start of creation
+-- note that u must add this without manually specifying id, otherwise serialization wont work, and
+-- later when people try to add clans, it will try to start again from 1
+-- thats why this must also be done right after creation of the clans datatable
 CREATE TABLE clans (
     id SERIAL PRIMARY KEY,
-    clanname VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     points INT DEFAULT 1000 NOT NULL,
     old_points INT DEFAULT 1000 NOT NULL,
     battles INT DEFAULT 0 NOT NULL,
     wins INT DEFAULT 0 NOT NULL,
-    average_enemyclan_rank NUMERIC(12, 6) DEFAULT 1000.000000 NOT NULL);
+    average_enemy_rank NUMERIC(12, 6) DEFAULT 1000.000000 NOT NULL);
 
-INSERT INTO clans (id, clanname, points, old_points, average_enemy_rank) VALUES (1, 'none', 0, 0, 0);
+INSERT INTO clans (name, points, old_points, average_enemy_rank) VALUES ('none', 0, 0, 0);
 
 
 CREATE TABLE clanwars (
