@@ -31,17 +31,21 @@ guilds = [
     1194360639544635482 # legion
 ]
 
+leader_password = "Ao823jsd7KGRAAAAGK421&?!"
+
+
 # BOT ENTERS THE CHANNEL
 @bot.event
 async def on_connect():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     await bot.sync_commands(guild_ids=guilds)
-    print("Slash commands have been cleared and updated.")
+    print("Slash commands have been cleared and updated... Wait a bit more before bot is ready...")
+    print("Bot is finally ready to function!")
 
 
 # -------- PRIVATE FUNCTIONS -----------
 
-# USE THIS TO CHECK IF REGISTERED
+# USE THIS TO CHECK IF USER REGISTERED
 async def is_registered(discord_id: str):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM players WHERE discord_id = %s", (discord_id,))
@@ -57,7 +61,7 @@ async def is_registered(discord_id: str):
 # USE TO INFO USER OF EXISTING CLANNAMES
 async def fetchExistingClannames():
     cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT clanname FROM players", ())
+    cursor.execute("SELECT clanname FROM clans", ())
     clannames = cursor.fetchall()
     current_clans = []
     for item in clannames:
@@ -170,33 +174,29 @@ async def update_player_points(context, challenger, opponent, challenger_win: bo
 # update player points ends
 
 
-async def print_facts(ctx, language):
-    answer = ""
-    if (language.lower() == 'eng'):
-        answer = random.choice(facts.facts_eng)
-    elif (language.lower() == 'rus'):
-        answer = random.choice(facts.facts_rus)
-    else:
-        await ctx.send(f"Given language {language} did not match language options. Try for example '/factual eng' or '/factual rus'.")
-        return
-    return await ctx.send(answer)  
-
 
 # ------- BOT COMMANDS (PUBLIC FUNCTIONS) ---------------
-
 
 # SLASH COMMAND VERSION OF LEARN COMMANDS IN ENGLISH
 @bot.slash_command(name="learncommands", description="Teaches commands of ludus-ranking-bot with English.")
 async def learncommands(ctx):
     commands_list = [
         "```The commands of ludus-ranking-bot are next:```",
-        "```'/register nickname', \n e.g '/register Sauron', \n to register into player database to be able to earn rank```",
-        "```'/challenge @nickname', \n e.g '/challenge @Sauron', \n to challenge another player in duel, winner gains ranking points, loser loses points ```",
-        "```'/changenick nickname' \n e.g  '/changenick Sauron', \n to change your nickname in your statistics```",
-        "```'/changeclan clanname' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
+        "```'/register', \n e.g '/register Sauron', \n to register into player database to be able to earn rank```",
+        "```'/clanregister, \n e.g '/clanregister Marchia' \n to register clan into clans database.```",
+        "```'/challenge', \n e.g '/challenge @Sauron', \n to challenge another player in duel, winner gains ranking points, loser loses points ```",
+        "```'/changenick' \n e.g  '/changenick Sauron', \n to change your nickname in your statistics```",
+        "```'/changeclan' \n e.g  '/changeclan Legion', \n defaultly clanname is empty, so u add clanname using this. also able to change clanname with this.```",
+        "```'/iamclanleader \n e.g '/iamclanleader 12345osman', \n become a clanleader to be able to announce events and report clanwar scores```",
+        "```'/printclanleaders \n e.g '/printclanleaders', \n print all clan leaders who have registered with '/iamclanleader'```",
+        "```'/reportclanwar \n e.g '/reportclanwar Legion 12 Valkyria 4' \n store information of clanwar scores into database ```",
+        "```'/eventannounce \n e.g '/eventannounce all clanwar Legion vs Valkuria saturday 19:00 CE!, \n bot private messages about event to all or specific role in channel.```",
         "```'/myscore' \n to print own statistics```",
-        "```'/top number' \n e.g  '/top 10', \n to print top players from any clan```",
-        "```'/clantop number clanname' \n e.g  '/clantop 3 Marchia', \n to print top players of a single clan.```",
+        "```'/top' \n e.g  '/top 10', \n to print top players from any clan```",
+        "```'/topclanplayers' \n e.g  '/topclanplayers 3 Marchia', \n to print top players of a single clan.```",
+        "```'/clanleaderboard \n e.g '/clanleaderboard 10', \n print top clans in order.```",
+        "```'/clanwarhistory \n e.g '/clanwarhistory Legion', \n print clanwar scores of the selected clan. ```",
+        "```'/printclans' \n e.g '/printclans', \n print all existing clannames```",
         "```'/factual' \n prints interesting facts from variety of topics in English. also useful to test if bot is active. ```",
         "```'/learncommands' \n teaches commands of ludus-ranking-bot with English. ```"
     ]
@@ -209,12 +209,13 @@ async def изучатькоманды(ctx):
     commands_list = [
         "```Команды ludus-ranking-bot следующие:```",
         "```'/register прозвище', \n например '/register Sauron', \n чтобы зарегистрироваться в базе данных игроков и иметь возможность зарабатывать рейтинг```",
+        "```'/clanregister названиеклана, \n например '/clanregister Marchia' \n зарегистрировать клан в базе данных кланов.```",
         "```'/challenge прозвище', \n например '/challenge @Sauron', \n чтобы вызвать другого игрока на дуэль, победитель получает очки рейтинга, проигравший теряет очки```",
         "```'/changenick @прозвище' \n например '/changenick Sauron', \n чтобы изменить свой никнейм в статистике```",
         "```'/changeclan названиеклана' \n например '/changeclan Legion', \n по умолчанию имя клана пустое, поэтому вы добавляете имя клана с помощью этой команды. также можно изменить имя клана с помощью этой команды.```",
         "```'/myscore' \n чтобы вывести свою статистику```",
         "```'/top число' \n например '/top 10', \n чтобы вывести топ игроков из любого клана```",
-        "```'/clantop число названиеклана' \n например '/clantop 3 Marchia', \n чтобы вывести топ игроков одного клана```",
+        "```'/topclanplayers число названиеклана' \n например '/topclanplayers 3 Marchia', \n чтобы вывести топ игроков одного клана```",
         "```'/факт' \n печатает интересные факты из самых разных тем. также полезно проверить, активен ли бот.```",
         "```'/изучатькоманды' \n обучает командам ludus-ranking-bot на английском языке.```"
     ]
@@ -229,7 +230,7 @@ async def factual(ctx):
     await ctx.respond(answer)  
 # factual eng ends
 
-# FACTUAL ENG COMMAND
+# FACTUAL RUS COMMAND
 @bot.slash_command(name="факт", description="Бот расскажет интересные факты")
 async def факт(ctx):
     answer = random.choice(facts.facts_rus)
@@ -238,7 +239,7 @@ async def факт(ctx):
 
 
 # REGISTER COMMAND
-@bot.slash_command(name="register", description="Register to player database")
+@bot.slash_command(name="register", description="Register to players database")
 async def register(ctx, nickname: str):
     # FETCH USER'S OFFICIAL DISCORD NAME
     username = str(ctx.author.name)
@@ -253,7 +254,7 @@ async def register(ctx, nickname: str):
         amount_of_lines = cursor.fetchone()[0]
         if (amount_of_lines < 10000):
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO players (username, points, nickname, discord_id, old_points, battles, wins, average_enemy_rank, clanname) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (username, 1000, nickname, str(ctx.author.id), 1000, 0, 0, 0, 'None'))
+            cursor.execute("INSERT INTO players (username, nickname, discord_id) VALUES (%s, %s, %s)", (username, nickname, str(ctx.author.id),))
             await ctx.respond(f"Your discord account has successfully been registered with the current nickname {nickname} to participate ranked games! You can later change your nickname if you want.")
         else:
             await ctx.respond("The database is full. Please contact admins.")
@@ -278,27 +279,62 @@ async def changenick(ctx, nickname: str):
 # change nickname ends
 
 
+# PRINTCLANS COMMAND
+@bot.slash_command(name="printclans", description="Print all existing clannames")
+async def printclans(ctx):
+    existing_clans = await fetchExistingClannames()
+    await ctx.respond("Currently existing clans are next: ")
+    await ctx.send(existing_clans)
+    await ctx.send("If you miss a clan, use '/registerclan' command!")  
+# printclans ends
+
+
 # CHANGECLAN COMMAND
 @bot.slash_command(name="changeclan", description="Give yourself a new clanname")
-async def changeclan(ctx, clanname: str):
+async def changeclan(ctx, new_clanname: str):
+    new_clanname = new_clanname.lower()
     # IF USER ID EXISTS IN DATABASE, CHANGE THEIR CLANNAME
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
+        existing_clans = await fetchExistingClannames()
+        if new_clanname not in existing_clans:
+            await ctx.respond(f"The clanname {new_clanname} is not part of existing clan names. First use '/registerclan'.")
+            await ctx.send(f"Alternatively there was a typo. The currently existing clannames are: {existing_clans}. Clannames are automatically lower letters!")
+            return
         cursor = conn.cursor()
-        cursor.execute("SELECT clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+        cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+        old_clan_id = cursor.fetchone()[0]
+        cursor.execute("SELECT clanname FROM clans WHERE id = %s", (old_clan_id,))
         old_clanname = cursor.fetchone()[0]
-        current_clans = await fetchExistingClannames()
-        if (clanname in current_clans):
-            cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
-            await ctx.respond(f"```Your clanname has been updated! Your old clanname was {old_clanname}. Your new clanname is {clanname}```")
+        if (new_clanname == old_clanname):
+            await ctx.respond(f"You already belong to the clan {new_clanname}")
             return
         else:
-            cursor.execute("UPDATE players SET clanname = %s WHERE discord_id = %s", (clanname, str(ctx.author.id)))
-            await ctx.respond(f"```Your clanname has been updated! \n Your old clanname was {old_clanname}. Your new clanname is {clanname}. \n Please note that the new clanname you chose is a new clanname. If you wanted to select a previously existing clanname, try one of these: \n {current_clans}```")
+            cursor.execute("SELECT id FROM clans WHERE clanname = %s", (new_clanname,))
+            new_clan_id = cursor.fetchone()[0]
+            cursor.execute("UPDATE players SET clan_id = (%s)", (new_clan_id,))
+            await ctx.respond(f"Your clanname has been updated. Your old clanname was {old_clanname}. Your new clanname is {new_clanname}")
+            return
     else:
-        ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
+        await ctx.respond(f"You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.")
         return
 # change clanname ends
+
+# ADD CLAN COMMAND
+@bot.slash_command(name="registerclan", description="Give yourself a new clanname")
+async def registerclan(ctx, clanname: str):
+    clanname = clanname.lower()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM clans WHERE clanname = %s", (clanname,))
+    existing_clan = cursor.fetchone()
+
+    if existing_clan is not None:
+        await ctx.respond(f"The clan {clanname} already exists")
+        return
+    
+    cursor.execute("INSERT INTO clans (clanname) VALUES (%s)", (clanname,))
+    await ctx.respond(f"The clan {clanname} has been registered as a new clan!")
+    return
 
 
 # MYSCORE COMMAND
@@ -309,7 +345,7 @@ async def myscore(ctx):
         ctx.respond(f"```You have not yet registered. Please register by writing /register nickname. If problem persists contact admins.```")
         return
     cursor = conn.cursor()
-    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
     score = cursor.fetchone()
     stats = {
         'nickname': score[0],
@@ -317,18 +353,20 @@ async def myscore(ctx):
         'battles': score[2],
         'wins': score[3],
         'average_enemy_rank': score[4],
-        "clanname": score[5]
+        "clan_id": score[5]
     }
+    cursor.execute("SELECT clanname FROM clans WHERE id = %s", (stats["clan_id"],))
+    clanname = cursor.fetchone()[0]
     if stats["battles"] > 0:
-        await ctx.respond(f"```Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}```")
+        await ctx.respond(f"```Your {ctx.author.display_name} current stats are: \n points: {stats['points']}, \n winrate: {(stats['wins'] / stats['battles'])*100}%, \n battles: {stats['battles']}, \n avrg enemy rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {clanname}```")
     else:
-        await ctx.respond(f"```Your {ctx.author.mention} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {stats['clanname']}```")
+        await ctx.respond(f"```Your {ctx.author.display_name} current stats are: \n points: {stats['points']}, \n winrate: 0%, \n battles: {stats['battles']}, \n avrg_enemy_rank: {round(stats['average_enemy_rank'], 0)}, \n clanname: {clanname}```")
 # myscore ends
 
 
 # TOP X COMMAND
 # for example, user gives '/top 10' and bot gives scores of top10 players
-@bot.slash_command(name="top", description="Print top x players of all players")
+@bot.slash_command(name="top", description="Print top players of all players")
 async def top(ctx, number: int):
 
     number = int(number)
@@ -336,7 +374,10 @@ async def top(ctx, number: int):
     await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
 
     cursor = conn.cursor()
-    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players ORDER BY points DESC",())
+    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.clanname 
+                   FROM players 
+                   LEFT JOIN clans ON players.clan_id = clans.id 
+                   ORDER BY points DESC""",())
 
     scores_per_player = []
     top_players = cursor.fetchmany(number)
@@ -345,7 +386,6 @@ async def top(ctx, number: int):
     for item in top_players:
         calculator += 1
         printable_text = ""
-        wins = item[3]
         if (item[2] > 0):
             printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         else:
@@ -357,22 +397,34 @@ async def top(ctx, number: int):
 
 
 # CLANTOP X COMMAND
-@bot.slash_command(name="clantop", description="Print top x players of a specific clan")
-async def clantop(ctx, number: int, clanname: str):
+@bot.slash_command(name="topclanplayers", description="Print top players of a specific clan")
+async def topclanplayers(ctx, number: int, clanname: str):
+
+    clanname = clanname.lower()
+    current_clans = await fetchExistingClannames()
+
+    if clanname not in current_clans:
+        await ctx.respond(f"```The clan {clanname} is not currently part of existing clans.```")
+        await ctx.send(f"```Existing clans are: \n {current_clans}```")
+        await ctx.send("```If you miss a clan, use '/registerclan' command!```")
+        return
 
     number = int(number)
     scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS OF {clanname}"
     await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
 
     cursor = conn.cursor()
-    cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clanname FROM players WHERE clanname = %s ORDER BY points DESC", (clanname,))
+    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.clanname 
+                   FROM players 
+                   LEFT JOIN clans ON players.clan_id = clans.id
+                   WHERE clans.clanname = %s
+                   ORDER BY points DESC""",(clanname,))
 
     scores_per_player = []
     top_players = cursor.fetchmany(number)
 
     if (len(top_players) < 1):
-        await ctx.send(f"```No players were found with clanname: '{clanname}'. Maybe there is a typo. For example, small and large letters are considered separate.```")
-        current_clans = await fetchExistingClannames()
+        await ctx.send(f"```No players were found with clanname: '{clanname}'.```")
         await ctx.send(f"```Currently existing clannames are: \n {current_clans}```")
         return
 
@@ -380,7 +432,6 @@ async def clantop(ctx, number: int, clanname: str):
     for item in top_players:
         calculator += 1
         printable_text = ""
-        wins = item[3]
         if (item[2] > 0):
             printable_text = f"RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         else:
@@ -389,6 +440,147 @@ async def clantop(ctx, number: int, clanname: str):
     await ctx.send("\n".join(scores_per_player))
     await ctx.send(f"```** Top{number} players of {clanname} have been printed! **```")
 # clantop X ends
+
+
+# CLAN LEADERBOARD COMMAND
+# TOP X COMMAND
+# for example, user gives '/top 10' and bot gives scores of top10 players
+@bot.slash_command(name="clanleaderboard", description="Print top clans in order")
+async def clanleaderboard(ctx, number: int):
+
+    number = int(number)
+    scoreboard_text = f"LEADERBOARD TOP{number} CLANS"
+    await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
+
+    cursor = conn.cursor()
+    cursor.execute("""SELECT clanname, points, battles, wins, average_enemyclan_rank
+                   FROM clans
+                   ORDER BY points DESC""",())
+
+    scores_per_clan = []
+    top_clans = cursor.fetchmany(number)
+    
+    calculator = 0
+    for item in top_clans:
+        calculator += 1
+        printable_text = ""
+        if (item[2] > 0):
+            printable_text = f"RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {(item[3] / item[2]) * 100}%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
+        else:
+            printable_text = f"RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
+        scores_per_clan.append(f"``` {printable_text.center(24)} ```")
+    await ctx.send("\n".join(scores_per_clan))
+    await ctx.send(f"```** Top{number} clans have been printed! **```")
+# clanleaderboard ends
+
+
+@bot.slash_command(name="clanwarhistory", description="Print clanwar scores of the selected clan")
+async def clanwarhistory(ctx, clanname: str, number: int):
+    clanname = clanname.lower()
+    existing_clans = await fetchExistingClannames()
+    if clanname not in existing_clans:
+        await ctx.respond(f"```The clanname {clanname} you selected is not currently existing.```")
+        await ctx.send(f"```The clannames existing are: \n {existing_clans}```")
+        await ctx.send("```If you are missing a clan, use command '/registerclan'```")
+        return
+    cursor = conn.cursor()
+    cursor.execute(""" SELECT clanwars.date, challenger_clan.clanname AS challenger_name, clanwars.challenger_won_rounds, defender_clan.clanname AS defender_name, clanwars.defender_won_rounds
+                    FROM clanwars
+                    LEFT JOIN clans AS challenger_clan ON clanwars.challenger_clan_id = challenger_clan.id
+                    LEFT JOIN clans AS defender_clan ON clanwars.defender_clan_id = defender_clan.id
+                    ORDER BY clanwars.date DESC""", ())
+    clanwars = cursor.fetchmany(number)
+    if (len(clanwars) >= 1):
+        await ctx.respond(f"```The last {number} clanwars of clan {clanname} had next scores:```")
+        for war in clanwars:
+            await ctx.send(f"```date: {war[0]} \n challenger_clanname {war[1]}, \n challenger_points: {war[2]}, \n defender_clanname: {war[3]}, \n defender_points: {war[4]}```")
+        await ctx.send(f"")
+        return
+    else:
+        await ctx.respond(f"```The clanwarhistory of clan {clanname} is currently empty!```")
+        await ctx.send("```If you think that there is a lack of information, please contact admins.```")
+        await ctx.send(f"```Admins are supposed to use '/reportclanwar' to store scores received```")
+        return
+    # clanwarhistory ends
+    
+
+# REPORT CLANWAR COMMAND
+@bot.slash_command(name="reportclanwar", description="After war with enemy clan, write scores here!")
+async def reportclanwar(ctx):
+    await ctx.respond("This command will be hard to do. i need to make sure both clans exist. I need to make sure there wont be douple reporting too.")
+    await ctx.send("Also i will need to update not just clanwars datatable, but also clans datatable, and use already existing ranking system calculator for clans too...")
+# reportclanwar ends
+
+
+# EVENTANNOUNCE COMMAND
+@bot.slash_command(name="eventannounce", description="Messages privately all players of channel about an approaching event!")
+async def eventannounce(ctx, title: str, date: str, description:str):
+    cursor = conn.cursor()
+    cursor.execute("SELECT discord_id FROM clanleaders WHERE discord_id = %s", (str(ctx.author.id),))
+    existing_leader = cursor.fetchone()
+    if existing_leader is None:
+        await ctx.respond("```You are currently not eligible to announce events.```")
+        await ctx.send("```If you are a clan leader or clan admin, please contact Parrot.```")
+        await ctx.send("```Parrot will give you a password for '/iamclanleader' command to register as a clan leader.```")
+        return
+    await ctx.respond(f"```{ctx.author.display_name}, I will help you to announce the event... \n. \n. \n```")
+
+    # basis for messages
+    channel_message = f"@everyone \nThere will be an important \n{title.upper()} \non {date.upper()} \nwhere \n{description}! \n. \n. \nClick this sword emoticon if you plan to join! \n. \n."
+    private_message = f"There will be an important \n{title.upper()} \non {date.upper()} \nwhere \n{description}! \n. \n. \nPlease go to events of {ctx.guild.name} to click sword emoticon if u plan to join! \n. \n."
+    
+    # embed message everyone inside channel, add in sword emoticon
+    # use embed message, otherwise cannot use bot emoticons on it
+    channel_message_embed = discord.Embed(title="Event",
+    description=channel_message)
+    interactive_channel_message = await ctx.send(embed=channel_message_embed)
+    await interactive_channel_message.add_reaction("⚔️")
+
+    # direct message all players with normal string and encourage to add a sword emoticon
+    for member in ctx.guild.members:
+        if member is None:
+            continue
+        try:
+            await member.send(private_message)
+            print(f'Message sent to {member.name}')
+        except discord.Forbidden:
+            print(f'Cannot send message to {member.name}')
+        except discord.HTTPException as e:
+            print(f'Failed to send message to {member.name}: {e}')
+    print(f"All members of {ctx.guild.name} have been messaged about the coming event of {title}!")
+    return
+# eventannounce ends
+
+
+# EVENTANNOUNCE COMMAND
+@bot.slash_command(name="iamclanleader", description="If you have password, use this to register as an admin or clanleader!")
+async def iamclanleader(ctx, password:str):
+    if (password != leader_password):
+        await ctx.respond("```You have given wrong password to '/iamleader' command. \n If you are an admin or clanleader, ask Parrot for password.```")
+        return
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM clanleaders WHERE discord_id = %s", (str(ctx.author.id),))
+    alreadyin = cursor.fetchone()
+    if alreadyin is not None:
+        await ctx.respond("```You are already a registered clan leader!```")
+        return
+    else:
+        cursor.execute("INSERT INTO clanleaders (discord_id) VALUES (%s)", (str(ctx.author.id),))
+        await ctx.respond("```Congratulations. You have been added to clanleaders! \n Now you will be able to use '/eventannounce' and '/reportclanwarscores' commands```")
+        return
+# iamclanleader ends
+
+
+@bot.slash_command(name="printclanleaders", description="Print all clan leaders who have registered with '/iamclanleader'!")
+async def printclanleaders(ctx):
+    cursor = conn.cursor()
+    cursor.execute("SELECT players.username FROM players LEFT JOIN clanleaders ON players.discord_id = clanleaders.discord_id ORDER BY players.username DESC")
+    allleaders = []
+    allleadersdata = cursor.fetchall()
+    for leader in allleadersdata:
+        allleaders.append(leader[0])
+    await ctx.respond(f"All currently registered leaders are: \n {allleaders}")
+
 
 
 # CHALLENGE COMMAND
