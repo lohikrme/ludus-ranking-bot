@@ -483,17 +483,22 @@ async def clanwarhistory(ctx, clanname: str, number: int):
         await ctx.send(f"```The clannames existing are: \n {existing_clans}```")
         await ctx.send("```If you are missing a clan, use command '/registerclan'```")
         return
+    
+    # first fetch the id of given clan, so it will be easier to find all clanwars containing that id in challenger or defender
     cursor = conn.cursor()
+    cursor.execute("SELECT id FROM clans WHERE clanname = %s", (clanname,))
+    wanted_clan_id = cursor.fetchone()[0]
     cursor.execute(""" SELECT clanwars.date, challenger_clan.clanname AS challenger_name, clanwars.challenger_won_rounds, defender_clan.clanname AS defender_name, clanwars.defender_won_rounds
                     FROM clanwars
                     LEFT JOIN clans AS challenger_clan ON clanwars.challenger_clan_id = challenger_clan.id
                     LEFT JOIN clans AS defender_clan ON clanwars.defender_clan_id = defender_clan.id
-                    ORDER BY clanwars.date DESC""", ())
+                    WHERE challenger_clan.id = %s OR defender_clan.id = %s
+                    ORDER BY clanwars.date DESC""", (wanted_clan_id, wanted_clan_id,))
     clanwars = cursor.fetchmany(number)
     if (len(clanwars) >= 1):
         await ctx.respond(f"```The last {number} clanwars of clan {clanname} had next scores:```")
         for war in clanwars:
-            await ctx.send(f"```date: {war[0]} \n challenger_clanname {war[1]}, \n challenger_points: {war[2]}, \n defender_clanname: {war[3]}, \n defender_points: {war[4]}```")
+            await ctx.send(f"```date: {war[0]} \nchallenger_clanname {war[1]}, \nchallenger_points: {war[2]}, \ndefender_clanname: {war[3]}, \ndefender_points: {war[4]}```")
         await ctx.send(f"")
         return
     else:

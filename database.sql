@@ -18,7 +18,7 @@ CREATE TABLE players (
     average_enemy_rank NUMERIC(12, 6) DEFAULT 1000.000000 NOT NULL,
     clan_id INT DEFAULT 1);
 
--- create one clan with id = 1, clanname = "none", points = 0, old_points = 0, average_enemyclan_rank = 0 at the start of creation
+-- add one clan with id = 1, clanname = "none", points = 0, old_points = 0, average_enemyclan_rank = 0 at the start of creation
 CREATE TABLE clans (
     id SERIAL PRIMARY KEY,
     clanname VARCHAR(100) NOT NULL,
@@ -27,6 +27,8 @@ CREATE TABLE clans (
     battles INT DEFAULT 0 NOT NULL,
     wins INT DEFAULT 0 NOT NULL,
     average_enemyclan_rank NUMERIC(12, 6) DEFAULT 1000.000000 NOT NULL);
+
+INSERT INTO clans (id, clanname, points, old_points, average_enemy_rank) VALUES (1, 'none', 0, 0, 0);
 
 
 CREATE TABLE clanwars (
