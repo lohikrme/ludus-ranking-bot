@@ -679,12 +679,15 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str):
 
     # basis for messages
     channel_message = f"on {date}! \n \n@everyone click ⚔️ to join"
-    private_message = f"{title.upper()} \non {date}! \nPlease click ⚔️ in {ctx.guild.name} {ctx.channel.name} channel if you want to join!"
+    private_message = f"on {date}! \nPlease click ⚔️ in {ctx.guild.name} {ctx.channel.name} channel if you want to join!"
     
     # embed message everyone inside channel, add in sword emoticon
     # use embed message, otherwise cannot use bot emoticons on it
     channel_message_embed = discord.Embed(title=title.upper(),
     description=channel_message)
+    private_message_embed = discord.Embed(title=title.upper(), description = private_message)
+
+
     interactive_channel_message = await ctx.send(embed=channel_message_embed)
     await interactive_channel_message.add_reaction("⚔️")
 
@@ -694,7 +697,7 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str):
             continue
         if role in member.roles and not member.bot:
             try:
-                await member.send(private_message)
+                await member.send(embed=private_message_embed)
                 print(f'Message sent to {member.name}')
             except discord.Forbidden:
                 print(f'Cannot send message to {member.name}')
