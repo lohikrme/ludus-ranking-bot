@@ -73,8 +73,9 @@ async def fetchExistingClannames():
 async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, challenger_win: bool):
     
     # these can be updated as need
-    standard_point_change = 30
-    point_level_divident = 40
+    standard_point_change = 20
+    point_level_divident = 60
+    minimum_point_change = 2
 
     # fetch current points from database
     cursor = conn.cursor()
@@ -116,7 +117,7 @@ async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, cha
 
         # solve point change amount for both players
         if challenger_stats['current_points'] > defender_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, 1)
+            point_change = max(standard_point_change - point_levels, minimum_point_change)
             challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
             opponent_new_points = defender_stats['current_points'] - point_change # opponent loses points
 
@@ -146,7 +147,7 @@ async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, cha
             challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
             
         elif challenger_stats['current_points'] < defender_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, 1)
+            point_change = max(standard_point_change - point_levels, minimum_point_change)
             opponent_new_points = defender_stats['current_points'] + point_change # opponent gains points
             challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
 
@@ -168,8 +169,9 @@ async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, cha
 async def update_player_points(challenger, opponent, challenger_win: bool):
 
     # these can be updated as need
-    standard_point_change = 30
-    point_level_divident = 40
+    standard_point_change = 20
+    point_level_divident = 60
+    minimum_point_change = 2
 
     # fetch current points from database
     cursor = conn.cursor()
@@ -212,7 +214,7 @@ async def update_player_points(challenger, opponent, challenger_win: bool):
 
         # solve point change amount for both players
         if challenger_stats['current_points'] > opponent_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, 1)
+            point_change = max(standard_point_change - point_levels, minimum_point_change)
             challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
             opponent_new_points = opponent_stats['current_points'] - point_change # opponent loses points
 
@@ -242,7 +244,7 @@ async def update_player_points(challenger, opponent, challenger_win: bool):
             challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
             
         elif challenger_stats['current_points'] < opponent_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, 1)
+            point_change = max(standard_point_change - point_levels, minimum_point_change)
             opponent_new_points = opponent_stats['current_points'] + point_change # opponent gains points
             challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
 
@@ -722,12 +724,12 @@ async def challenge(ctx, opponent: discord.Member):
     # CHECK CHALLENGER AND OPPONENT ARE REGISTERED, OTHERWISE NOTIFY AND RETURN
     opponent_is_registered = await is_registered(str(opponent.id))
     if not opponent_is_registered:
-        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered.")
+        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered. Use '/registerplayer'.")
         return
     
     challenger_is_registered = await is_registered(str(ctx.author.id))
     if not challenger_is_registered:
-        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered.")
+        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered. Use '/registerplayer'.")
         return
     
     if (ctx.author.id in challenge_status):
@@ -773,7 +775,6 @@ async def challenge(ctx, opponent: discord.Member):
         
         if str(reaction.emoji) == "🗡️":
             challenge_status.remove(ctx.author.id)
-            await ctx.send(f"{ctx.author.display_name} has won against {opponent.display_name}!")
             await update_player_points(ctx.author, opponent, True)
             # notify users of their new points and pointchange
             cursor = conn.cursor()
@@ -785,10 +786,11 @@ async def challenge(ctx, opponent: discord.Member):
             opponent_points = cursor.fetchone()
             opponent_new_points = opponent_points[0]
             opponent_old_points = opponent_points[1]
-            await ctx.send(f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
+            challenger_win_embed = discord.Embed(title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
+                                                description=f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
+            await ctx.send(embed=challenger_win_embed)
         elif str(reaction.emoji) == "🏰":
             challenge_status.remove(ctx.author.id)
-            await ctx.send(f"{opponent.display_name} has won against {ctx.author.display_name}!")
             await update_player_points(ctx.author, opponent, False)
             # notify users of their new points and pointchange
             cursor = conn.cursor()
@@ -800,7 +802,9 @@ async def challenge(ctx, opponent: discord.Member):
             opponent_points = cursor.fetchone()
             opponent_new_points = opponent_points[0]
             opponent_old_points = opponent_points[1]
-            await ctx.send(f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
+            defender_win_embed = discord.Embed(title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
+                                               description=f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
+            await ctx.send(embed=defender_win_embed)
         elif str(reaction.emoji) == "🚫":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"The FT7 has been cancelled!")
@@ -808,7 +812,7 @@ async def challenge(ctx, opponent: discord.Member):
 
         # Proceed to result selection
     elif str(reaction.emoji) == "🚫":
-        await ctx.send("Challenge canceled.")
+        await ctx.send("Challenge cancelled.")
         challenge_status.remove(ctx.author.id)
 # challenge ends
 
