@@ -165,7 +165,7 @@ async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, cha
 
 
 # UPDATE PLAYER POINTS IN DATABASE
-async def update_player_points(context, challenger, opponent, challenger_win: bool):
+async def update_player_points(challenger, opponent, challenger_win: bool):
 
     # these can be updated as need
     standard_point_change = 30
@@ -251,18 +251,10 @@ async def update_player_points(context, challenger, opponent, challenger_win: bo
             opponent_new_points = opponent_stats['current_points'] + standard_point_change
 
     # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
-
     # update challenger points
     cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (challenger_stats['battles'], challenger_stats['wins'], challenger_stats['average_enemy_rank'], challenger_new_points, challenger_stats['current_points'], str(challenger.id),))
-
     # update opponent points
     cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (opponent_stats['battles'], opponent_stats['wins'], opponent_stats['average_enemy_rank'], opponent_new_points, opponent_stats['current_points'], str(opponent.id),))
-
-    # FEEDBACK USERS OF THEIR OLD AND NEW POINTS
-    if challenger_win:
-        await context.send(f"{challenger.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_stats['current_points']}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_stats['current_points'] - opponent_new_points})")
-    else:
-        await context.send(f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_stats['current_points']}) \n{challenger.mention} new points: {challenger_new_points}(-{challenger_stats['current_points'] - challenger_new_points})")
     return 
 # update player points ends
 
@@ -779,11 +771,33 @@ async def challenge(ctx, opponent: discord.Member):
         if str(reaction.emoji) == "🗡️":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"{ctx.author.display_name} has won against {opponent.display_name}!")
-            await update_player_points(ctx, ctx.author, opponent, True)
+            await update_player_points(ctx.author, opponent, True)
+            # notify users of their new points and pointchange
+            cursor = conn.cursor()
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+            challenger_points = cursor.fetchone()
+            challenger_new_points = challenger_points[0]
+            challenger_old_points = challenger_points[1]
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
+            opponent_points = cursor.fetchone()
+            opponent_new_points = opponent_points[0]
+            opponent_old_points = opponent_points[1]
+            await ctx.send(f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
         elif str(reaction.emoji) == "🏰":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"{opponent.display_name} has won against {ctx.author.display_name}!")
-            await update_player_points(ctx, ctx.author, opponent, False)
+            await update_player_points(ctx.author, opponent, False)
+            # notify users of their new points and pointchange
+            cursor = conn.cursor()
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+            challenger_points = cursor.fetchone()
+            challenger_new_points = challenger_points[0]
+            challenger_old_points = challenger_points[1]
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
+            opponent_points = cursor.fetchone()
+            opponent_new_points = opponent_points[0]
+            opponent_old_points = opponent_points[1]
+            await ctx.send(f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
         elif str(reaction.emoji) == "🚫":
             challenge_status.remove(ctx.author.id)
             await ctx.send(f"The FT7 has been cancelled!")
