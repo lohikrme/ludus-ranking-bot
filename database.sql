@@ -42,6 +42,6 @@ CREATE TABLE clanwars (
     challenger_won_rounds INT DEFAULT 0 NOT NULL,
     defender_won_rounds INT DEFAULT 0 NOT NULL);
 
-CREATE TABLE clanleaders (
-    discord_id VARCHAR(100) NOT NULL,
-)
+CREATE TABLE admins (
+    id SERIAL PRIMARY KEY,
+    discord_id VARCHAR(100) NOT NULL);
