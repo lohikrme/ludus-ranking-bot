@@ -736,84 +736,65 @@ async def challenge(ctx, opponent: discord.Member):
         await ctx.respond(f"You {ctx.author.mention} have already challenged somebody.")
         return
     
+    # THE REAL CHALLENGE FUNCTION BEGINS HERE
     await ctx.respond(".")
-
+    # keep track that person cannot do more than 1 challenge at time
     challenge_status.append(ctx.author.id)
+
     # Step 1: Initial Challenge Message
-    challenge_embed = discord.Embed(title="",
-                                    description=f"{ctx.author.mention} has challenged {opponent.mention} to ft7! \n⚔️accept    🚫decline")
+    challenge_embed = discord.Embed(title=f"{ctx.author.display_name} has challenged {opponent.display_name} to ft7!",
+                                    description=f"{opponent.mention} can select \n🗡️{ctx.author.display_name} won \n🏰{opponent.display_name} won \n🚫refuse.")
     challenge_msg = await ctx.send(embed=challenge_embed)
 
-    # Add reactions for Accept, Decline, Cancel
-    await challenge_msg.add_reaction("⚔️")  # Accept
-    await challenge_msg.add_reaction("🚫")  # Cancel
-    
+    # Add reactions for Challenger won, Opponent won, Refuse
+    await challenge_msg.add_reaction("🗡️")  # Challenger won
+    await challenge_msg.add_reaction("🏰")  # Opponent won
+    await challenge_msg.add_reaction("🚫")  # refuse
 
-    # Wait for a reaction
+    # Wait for a reaction from only opponent reactions count
     try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == opponent and str(r.emoji) in ["⚔️", "🚫"])
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
     except asyncio.TimeoutError:
         challenge_status.remove(ctx.author.id)
-        await ctx.send("Challenge expired.")
+        await ctx.send(f"{ctx.author.mention}'s challenge against {opponent.display_name} expired.")
         return
 
     # Handle reactions
-    if str(reaction.emoji) == "⚔️":
-        opponent_results_embed = discord.Embed(title="",
-        description=f"{opponent.mention} can select \n🗡️{ctx.author.display_name} won \n🏰{opponent.display_name} won \n🚫cancel.")
-        opponent_msg = await ctx.send(embed=opponent_results_embed)
-        await opponent_msg.add_reaction("🗡️") # challenger won
-        await opponent_msg.add_reaction("🏰") # opponent won
-        await opponent_msg.add_reaction("🚫") # cancel
-
-        try:
-            reaction, user = await bot.wait_for('reaction_add', timeout=300.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
-        except asyncio.TimeoutError:
-            challenge_status.remove(ctx.author.id)
-            await ctx.respond("FT7 expired.")
-            return
-        
-        if str(reaction.emoji) == "🗡️":
-            challenge_status.remove(ctx.author.id)
-            await update_player_points(ctx.author, opponent, True)
-            # notify users of their new points and pointchange
-            cursor = conn.cursor()
-            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
-            challenger_points = cursor.fetchone()
-            challenger_new_points = challenger_points[0]
-            challenger_old_points = challenger_points[1]
-            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
-            opponent_points = cursor.fetchone()
-            opponent_new_points = opponent_points[0]
-            opponent_old_points = opponent_points[1]
-            challenger_win_embed = discord.Embed(title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
-                                                description=f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
-            await ctx.send(embed=challenger_win_embed)
-        elif str(reaction.emoji) == "🏰":
-            challenge_status.remove(ctx.author.id)
-            await update_player_points(ctx.author, opponent, False)
-            # notify users of their new points and pointchange
-            cursor = conn.cursor()
-            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
-            challenger_points = cursor.fetchone()
-            challenger_new_points = challenger_points[0]
-            challenger_old_points = challenger_points[1]
-            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
-            opponent_points = cursor.fetchone()
-            opponent_new_points = opponent_points[0]
-            opponent_old_points = opponent_points[1]
-            defender_win_embed = discord.Embed(title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
-                                               description=f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
-            await ctx.send(embed=defender_win_embed)
-        elif str(reaction.emoji) == "🚫":
-            challenge_status.remove(ctx.author.id)
-            await ctx.send(f"The FT7 has been cancelled!")
-
-
-        # Proceed to result selection
-    elif str(reaction.emoji) == "🚫":
-        await ctx.send("Challenge cancelled.")
+    if str(reaction.emoji) == "🗡️":
         challenge_status.remove(ctx.author.id)
+        await update_player_points(ctx.author, opponent, True)
+        # notify users of their new points and pointchange
+        cursor = conn.cursor()
+        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+        challenger_points = cursor.fetchone()
+        challenger_new_points = challenger_points[0]
+        challenger_old_points = challenger_points[1]
+        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
+        opponent_points = cursor.fetchone()
+        opponent_new_points = opponent_points[0]
+        opponent_old_points = opponent_points[1]
+        challenger_win_embed = discord.Embed(title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
+                                            description=f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
+        await ctx.send(embed=challenger_win_embed)
+    elif str(reaction.emoji) == "🏰":
+        challenge_status.remove(ctx.author.id)
+        await update_player_points(ctx.author, opponent, False)
+        # notify users of their new points and pointchange
+        cursor = conn.cursor()
+        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+        challenger_points = cursor.fetchone()
+        challenger_new_points = challenger_points[0]
+        challenger_old_points = challenger_points[1]
+        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
+        opponent_points = cursor.fetchone()
+        opponent_new_points = opponent_points[0]
+        opponent_old_points = opponent_points[1]
+        defender_win_embed = discord.Embed(title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
+                                            description=f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
+        await ctx.send(embed=defender_win_embed)
+    elif str(reaction.emoji) == "🚫":
+        challenge_status.remove(ctx.author.id)
+        await ctx.send(f"The FT7 has been refused!")
 # challenge ends
 
 
