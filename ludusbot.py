@@ -446,14 +446,12 @@ async def myscore(ctx):
 # myscore ends
 
 
-# PLAYER LEADERBOARD COMMAND
-# for example, user gives '/playerleaderboard 10' and bot gives scores of top10 players
-@bot.slash_command(name="playerleaderboard", description="Print top players of all players!")
+# LEADERBOARD PLAYERS COMMAND
+@bot.slash_command(name="leaderboardplayers", description="Print top players of all players!")
 async def playerleaderboard(ctx, number: int):
 
     number = int(number)
-    scoreboard_text = f"SCOREBOARD TOP{number} PLAYERS"
-    await ctx.respond("```**" + scoreboard_text.center(24) + "**```")
+    await ctx.respond(f"``` ** LEADERBOARD OF PLAYERS **```")
 
     cursor = conn.cursor()
     cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.name 
@@ -478,9 +476,9 @@ async def playerleaderboard(ctx, number: int):
 # player leaderboard ends
 
 
-# PLAYER LEADERBOARD CLAN COMMAND
-@bot.slash_command(name="playerleaderboardclan", description="Print top players of a specific clan!")
-async def playerleaderboardclan(ctx, number: int, clanname: str):
+# LEADERBOARD PLAYERS OF CLAN COMMAND
+@bot.slash_command(name="leaderboardplayersofclan", description="Print top players of a specific clan!")
+async def leaderboardplayersofclan(ctx, number: int, clanname: str):
     clanname = clanname.lower()
     current_clans = await fetchExistingClannames()
     if clanname not in current_clans:
@@ -512,13 +510,13 @@ async def playerleaderboardclan(ctx, number: int, clanname: str):
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     await ctx.send("\n".join(scores_per_player))
     await ctx.send (f"```** Top{number} players of {clanname}! **```")
-# player leaderboard clan ends
+# leaderboard players of clan ends
 
 
-# CLAN LEADERBOARD COMMAND
+# LEADERBOARD CLAN COMMAND
 # for example, user gives '/clanleaderboard 10' and bot gives scores of top10 clans
-@bot.slash_command(name="clanleaderboard", description="Print top clans in order!")
-async def clanleaderboard(ctx, number: int):
+@bot.slash_command(name="leaderboardclans", description="Print top clans in order!")
+async def leaderboardclans(ctx, number: int):
     await ctx.respond(f"``` ** LEADERBOARD OF CLANS **```")
     number = int(number)
     cursor = conn.cursor()
@@ -538,7 +536,7 @@ async def clanleaderboard(ctx, number: int):
             printable_text = f"       RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
         scores_per_clan.append(f"``` {printable_text.center(24)} ```")
     await ctx.send("\n".join(scores_per_clan))
-    await ctx.send(f"```** Top{number} clans have been printed! **```")
+    await ctx.send(f"```  ** Top{number} clans! **```")
 # clanleaderboard ends
     
 
@@ -630,11 +628,18 @@ async def printclanwars(ctx, clanname: str, number: int):
                     WHERE challenger_clan.id = %s OR defender_clan.id = %s
                     ORDER BY clanwars.date DESC, clanwars.id DESC""", (wanted_clan_id, wanted_clan_id,))
     clanwars = cursor.fetchmany(number)
+    # print clanwar history
     if (len(clanwars) >= 1):
-        await ctx.respond(f"```The last {number} clanwars of clan {clanname} had next scores:```")
-        for war in clanwars:
-            await ctx.send(f"```date: {war[0]} \nchallenger_clanname {war[1]}, \nchallenger_points: {war[2]}, \ndefender_clanname: {war[3]}, \ndefender_points: {war[4]}```")
-        await ctx.send(f"")
+        scores = []
+        printable_text = ""
+        # war[0] = date, war[1] = challenger name, war[2] = challenger points, war[3] = defender name, war[4] = defender points
+        for war in clanwars: 
+            printable_text = (f"```date: {war[0]} \n{war[1]} vs {war[3]} [{war[2]}-{war[4]}]```")
+            scores.append(printable_text)
+
+        await ctx.respond(f"```** {number} CLANWARS OF {clanname.upper()}: **```")
+        await ctx.send("\n".join(scores))
+        await ctx.send(f"```** {number} MOST RECENT CLANWARS OF {clanname.upper()} HAVE BEEN PRINTED! **```")
         return
     else:
         await ctx.respond(f"```The clanwar history of clan {clanname} is currently empty! \nIf you think that there is a lack of information, please contact admins.```")
@@ -670,23 +675,23 @@ async def printadmins(ctx):
 
 
 # EVENTANNOUNCE COMMAND
-@bot.slash_command(name="eventannounce", description="Messages privately all players of channel about an approaching event!")
-async def eventannounce(ctx, title: str, date: str, description:str):
+@bot.slash_command(name="eventannounce", description="Messages privately players of channel about an approaching event!")
+async def eventannounce(ctx, role: discord.Role, title: str, date: str):
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
     existing_leader = cursor.fetchone()
     if existing_leader is None:
         await ctx.respond("```Only admins registered with '/registeradmin' can announce events!```")
         return
-    await ctx.respond(f"```{ctx.author.display_name}, I will help you to announce the event... \n. \n. \n```")
+    await ctx.respond(f".")
 
     # basis for messages
-    channel_message = f"@everyone \nThere will be an important \n{title.upper()} \non {date.upper()} \nwhere \n{description}! \n. \n. \nClick this sword emoticon if you plan to join! \n. \n."
-    private_message = f"There will be an important \n{title.upper()} \non {date.upper()} \nwhere \n{description}! \n. \n. \nPlease go to events of {ctx.guild.name} to click sword emoticon if u plan to join! \n. \n."
+    channel_message = f"on {date}! \n \n@everyone click ⚔️ to join"
+    private_message = f"{title.upper()} \non {date}! \nPlease click ⚔️ in {ctx.guild.name} {ctx.channel.name} channel if you want to join!"
     
     # embed message everyone inside channel, add in sword emoticon
     # use embed message, otherwise cannot use bot emoticons on it
-    channel_message_embed = discord.Embed(title="Event",
+    channel_message_embed = discord.Embed(title=title.upper(),
     description=channel_message)
     interactive_channel_message = await ctx.send(embed=channel_message_embed)
     await interactive_channel_message.add_reaction("⚔️")
@@ -695,13 +700,14 @@ async def eventannounce(ctx, title: str, date: str, description:str):
     for member in ctx.guild.members:
         if member is None:
             continue
-        try:
-            await member.send(private_message)
-            print(f'Message sent to {member.name}')
-        except discord.Forbidden:
-            print(f'Cannot send message to {member.name}')
-        except discord.HTTPException as e:
-            print(f'Failed to send message to {member.name}: {e}')
+        if role in member.roles and not member.bot:
+            try:
+                await member.send(private_message)
+                print(f'Message sent to {member.name}')
+            except discord.Forbidden:
+                print(f'Cannot send message to {member.name}')
+            except discord.HTTPException as e:
+                print(f'Failed to send message to {member.name}: {e}')
     print(f"All members of {ctx.guild.name} have been messaged about the coming event of {title}!")
     return
 # event announce ends
