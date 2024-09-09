@@ -680,11 +680,10 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str):
     await ctx.respond(f".")
 
     # basis for messages
-    channel_message = f"on {date}! \n \n@everyone click ⚔️ to join"
+    channel_message = f"on {date}! \n \n{role.mention} click ⚔️ to join"
     private_message = f"on {date}! \nPlease click ⚔️ in {ctx.guild.name} {ctx.channel.name} channel if you want to join!"
     
-    # embed message everyone inside channel, add in sword emoticon
-    # use embed message, otherwise cannot use bot emoticons on it
+    # use embed message, otherwise cannot use bot emoticons on it to get "votes" how many will join
     channel_message_embed = discord.Embed(title=title.upper(),
     description=channel_message)
     private_message_embed = discord.Embed(title=title.upper(), description = private_message)
