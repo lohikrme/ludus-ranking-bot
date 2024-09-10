@@ -742,7 +742,7 @@ async def challenge(ctx, opponent: discord.Member):
 
     # Step 1: Initial Challenge Message
     challenge_embed = discord.Embed(title=f"{ctx.author.display_name} has challenged {opponent.display_name} to ft7!",
-                                    description=f"{opponent.mention} can select \n🗡️{ctx.author.display_name} won \n🏰{opponent.display_name} won \n🚫refuse.")
+                                    description=f"{opponent.mention} can select: \n*  🗡️{ctx.author.display_name} won \n*  🏰{opponent.display_name} won \n*  🚫refuse.")
     challenge_msg = await ctx.send(embed=challenge_embed)
 
     # Add reactions for Challenger won, Opponent won, Refuse
