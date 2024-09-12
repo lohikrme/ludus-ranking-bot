@@ -44,6 +44,15 @@ async def on_connect():
 
 # -------- PRIVATE FUNCTIONS -----------
 
+# USE THIS TO UPDATE DUELS DATATABLE HISTORY
+async def update_duels_history(challenger_discord_id: str, opponent_discord_id: str, challenger_won: bool):
+    date = datetime.datetime.now()
+    date = date.strftime('%Y-%m-%d %H:%M:%S')
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO duels (date, challenger_discord_id, opponent_discord_id, challenger_won) VALUES (%s, %s, %s, %s)", (date, challenger_discord_id, opponent_discord_id, challenger_won))
+# update duels history ends  
+  
+
 # USE THIS TO CHECK IF USER REGISTERED
 async def is_registered(discord_id: str):
     cursor = conn.cursor()
@@ -71,7 +80,6 @@ async def fetchExistingClannames():
 
 # UPDATE CLAN POINTS IN DATABASE
 async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, challenger_win: bool):
-    
     # these can be updated as need
     standard_point_change = 20
     point_level_divident = 60
@@ -649,6 +657,88 @@ async def printclannames(ctx):
 # print clannames ends
 
 
+# PRINTMYDUELSAGAINST COMMAND
+@bot.slash_command(name="printmyduelsagainst", description="Print your latest duels against a specific opponent")
+async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
+    duel_history = []
+    # make sure challenger is registered before trying to find him from the database
+    author_is_registered = await is_registered(str(ctx.author.id))
+    if not author_is_registered:
+        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Use '/registerplayer'.")
+        return
+    # make sure opponent is registered before trying to find him from the database
+    opponent_is_registered = await is_registered(str(opponent.id))
+    if not opponent_is_registered:
+        await ctx.respond(f"{opponent.display_name} has not yet been registered. Use '/registerplayer'.")
+        return
+
+    # fetch all duels of person and show the duels with correct nicknames
+    # note that author can be either challenger or opponent in the database
+    cursor = conn.cursor()
+    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_won
+                   FROM duels
+                   LEFT JOIN players AS challenger_player ON duels.challenger_discord_id = challenger_player.discord_id
+                   LEFT JOIN players AS opponent_player ON duels.opponent_discord_id = opponent_player.discord_id
+                   WHERE (challenger_player.discord_id = %s OR challenger_player.discord_id = %s) 
+                   AND (opponent_player.discord_id = %s OR opponent_player.discord_id = %s)
+                   ORDER BY duels.date DESC""", (str(ctx.author.id), str(opponent.id), str(ctx.author.id), str(opponent.id),))
+    duels = cursor.fetchmany(number)
+    if len(duels) >= 1:
+        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_won
+            if duel[3] == True:
+                message = f"```{duel[0]} \n{duel[1]} won vs {duel[2]}```"
+                duel_history.append(message)
+            else: 
+                message = f"```{duel[0]} \n{duel[2]} won vs {duel[1]}```"
+                duel_history.append(message)
+        await ctx.respond(f"```** {number} DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
+        await ctx.send("\n".join(duel_history))
+        await ctx.send(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} HAVE BEEN PRINTED!```")
+        return
+    else:
+        await ctx.respond(f"{ctx.author.mention} does not have duels against {opponent.display_name}")
+        return
+# print my duels against ends
+
+
+# PRINTMYDUELS
+@bot.slash_command(name="printmyduels", description="Print your latest duels against anyone")
+async def printmyduels(ctx, number: int):
+    duel_history = []
+    # make sure challenger is registered before trying to find him from the database
+    author_is_registered = await is_registered(str(ctx.author.id))
+    if not author_is_registered:
+        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Use '/registerplayer'.")
+        return
+    
+    # fetch all duels where challenger or opponent was author
+    cursor = conn.cursor()
+    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_won
+                   FROM duels
+                   LEFT JOIN players AS challenger_player ON duels.challenger_discord_id = challenger_player.discord_id
+                   LEFT JOIN players AS opponent_player ON duels.opponent_discord_id = opponent_player.discord_id
+                   WHERE (challenger_player.discord_id = %s OR opponent_player.discord_id = %s)
+                   ORDER BY duels.date DESC""", (str(ctx.author.id), str(ctx.author.id),))
+    duels = cursor.fetchmany(number)
+
+    if len(duels) >= 1:
+        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_won
+            if duel[3] == True:
+                message = f"```{duel[0]} \n{duel[1]} won vs {duel[2]}```"
+                duel_history.append(message)
+            else: 
+                message = f"```{duel[0]} \n{duel[2]} won vs {duel[1]}```"
+                duel_history.append(message)
+        await ctx.respond(f"```** {number} DUELS OF {ctx.author.display_name.upper()} **```")
+        await ctx.send("\n".join(duel_history))
+        await ctx.send(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
+        return
+    else:
+        await ctx.respond(f"{ctx.author.mention} does not have any duels!")
+        return
+# print my duels ends
+
+
 # PRINTADMINS COMMAND
 @bot.slash_command(name="printadmins", description="Print all admins who have registered with '/registeradmin'!")
 async def printadmins(ctx):
@@ -758,10 +848,12 @@ async def challenge(ctx, opponent: discord.Member):
         await ctx.send(f"{ctx.author.mention}'s challenge against {opponent.display_name} expired.")
         return
 
-    # Handle reactions
+    # HANDLE REACTIONS
+    # challenger won
     if str(reaction.emoji) == "🗡️":
         challenge_status.remove(ctx.author.id)
         await update_player_points(ctx.author, opponent, True)
+        await update_duels_history(str(ctx.author.id), str(opponent.id), True)
         # notify users of their new points and pointchange
         cursor = conn.cursor()
         cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -775,9 +867,11 @@ async def challenge(ctx, opponent: discord.Member):
         challenger_win_embed = discord.Embed(title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
                                             description=f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
         await ctx.send(embed=challenger_win_embed)
+    # opponent won
     elif str(reaction.emoji) == "🏰":
         challenge_status.remove(ctx.author.id)
         await update_player_points(ctx.author, opponent, False)
+        await update_duels_history(str(ctx.author.id), str(opponent.id), False)
         # notify users of their new points and pointchange
         cursor = conn.cursor()
         cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -791,6 +885,7 @@ async def challenge(ctx, opponent: discord.Member):
         defender_win_embed = discord.Embed(title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
                                             description=f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
         await ctx.send(embed=defender_win_embed)
+    # refuse duel
     elif str(reaction.emoji) == "🚫":
         challenge_status.remove(ctx.author.id)
         await ctx.send(f"The FT7 has been refused!")

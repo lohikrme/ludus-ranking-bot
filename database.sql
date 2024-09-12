@@ -45,3 +45,13 @@ CREATE TABLE clanwars (
 CREATE TABLE admins (
     id SERIAL PRIMARY KEY,
     discord_id VARCHAR(100) NOT NULL);
+
+
+-- INSERT INTO duels (date, challenger_discord_id, opponent_discord_id, challenger_won) VALUES ('2024-9-12 20:30:00', '1234', '9876', TRUE/FALSE)
+CREATE TABLE duels (
+    id SERIAL PRIMARY KEY,
+    date TIMESTAMP NOT NULL,
+    challenger_discord_id VARCHAR(100) NOT NULL,
+    opponent_discord_id VARCHAR(100) NOT NULL,
+    challenger_won BOOLEAN NOT NULL
+);

@@ -10,7 +10,8 @@ These clan scores can be printed with '/printclanwars' or '/leaderboardclans'.
 The command contains a 'role' which defines to whom the bot will directly message about the event.
 
 3. Players can use the '/challenge' to gain personal ranking points e.g after duels.
-These scores can be printed with '/leaderboardplayers' or '/leaderboardplayersofclan'```"""
+These scores can be printed with '/leaderboardplayers' or '/leaderboardplayersofclan'.
+Or if they want to see their duels against a specific opponent, use '/printmyduelsagainst'.```"""
 
 
 
@@ -26,7 +27,8 @@ guide_rus = """```'Ludus ranking bot' имеет 3 основные функци
 Команда содержит 'role', который определяет, кому бот будет напрямую отправлять сообщения о событии.
 
 3. Игроки могут использовать команду '/challenge' для получения личных очков рейтинга, например, после дуэлей.
-Эти результаты можно распечатать с помощью команд '/leaderboardplayers' или '/leaderboardplayersofclan'```"""
+Эти результаты можно распечатать с помощью команд '/leaderboardplayers' или '/leaderboardplayersofclan'.
+Или, если они хотят увидеть свои дуэли против определенного противника, используйте '/printmyduelsagainst'.```"""
 
 
 
@@ -43,4 +45,5 @@ Bu klan skorları '/printclanwars' veya '/leaderboardclans' komutlarıyla yazdı
 Komut, botun etkinlik hakkında doğrudan mesaj göndereceği kişileri belirleyen bir 'role' içerir.
 
 3. Oyuncular, düellolar gibi kişisel sıralama puanları kazanmak için '/challenge' komutunu kullanabilir.
-Bu skorlar '/leaderboardplayers' veya '/leaderboardplayersofclan' komutlarıyla yazdırılabilir.```"""
+Bu skorlar '/leaderboardplayers' veya '/leaderboardplayersofclan' komutlarıyla yazdırılabilir.
+Veya belirli bir rakibe karşı düellolarını görmek istiyorlarsa, '/printmyduelsagainst' kullanın.```"""
