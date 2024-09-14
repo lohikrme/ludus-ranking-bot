@@ -759,8 +759,8 @@ async def printadmins(ctx):
 
 
 # EVENTANNOUNCE COMMAND
-@bot.slash_command(name="eventannounce", description="Messages privately players of channel about an approaching event!")
-async def eventannounce(ctx, role: discord.Role, title: str, date: str):
+@bot.slash_command(name="eventannounce", description="Messages privately clan members about an approaching event!")
+async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: str, password: str):
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
     existing_leader = cursor.fetchone()
@@ -770,7 +770,7 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str):
     await ctx.respond(f".")
 
     # basis for messages
-    channel_message = f"on {date}! \n \n{role.mention} click ⚔️ to join"
+    channel_message = f"on {date.lower()}! \nat {where.lower()} \n password: {password}  \n \n{role.mention} click ⚔️ to join"
     private_message = f"on {date}! \nPlease click ⚔️ in {ctx.guild.name} {ctx.channel.name} channel if you want to join!"
     
     # use embed message, otherwise cannot use bot emoticons on it to get "votes" how many will join
