@@ -451,9 +451,8 @@ async def myscore(ctx):
 # LEADERBOARD PLAYERS COMMAND
 @bot.slash_command(name="leaderboardplayers", description="Print top players of all players!")
 async def playerleaderboard(ctx, number: int):
-
-    number = int(number)
-    await ctx.respond(f"``` ** LEADERBOARD OF PLAYERS **```")
+    scores_per_player = []
+    scores_per_player.append("``` ** LEADERBOARD OF PLAYERS **```")
 
     cursor = conn.cursor()
     cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.name 
@@ -462,8 +461,6 @@ async def playerleaderboard(ctx, number: int):
                    ORDER BY points DESC""",())
 
     top_players = cursor.fetchmany(number)
-    
-    scores_per_player = []
     calculator = 0
     for item in top_players:
         calculator += 1
@@ -473,21 +470,23 @@ async def playerleaderboard(ctx, number: int):
         else:
             printable_text = f"        RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
-    await ctx.send("\n".join(scores_per_player))
-    await ctx.send(f"```  ** Top{number} players! **```")
+    scores_per_player.append(f"```  ** TOP{number} PLAYERS HAVE BEEN PRINTED! **```")
+    await ctx.respond("".join(scores_per_player))
 # player leaderboard ends
 
 
 # LEADERBOARD PLAYERS OF CLAN COMMAND
 @bot.slash_command(name="leaderboardplayersofclan", description="Print top players of a specific clan!")
 async def leaderboardplayersofclan(ctx, number: int, clanname: str):
+    scores_per_player = []
+    scores_per_player.append(f"``` ** LEADERBOARD PLAYERS OF {clanname.upper()} **```")
+
     clanname = clanname.lower()
     current_clans = await fetchExistingClannames()
     if clanname not in current_clans:
         await ctx.respond(f"```{clanname} is not part of existing clans: \n{current_clans} \nYou may use '/registerclan' to create a new clan.```")
         return
     number = int(number)
-    await ctx.respond(f"``` ** LEADERBOARD OF {clanname.upper()} **```")
 
     cursor = conn.cursor()
     cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.name 
@@ -500,7 +499,6 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
         await ctx.send(f"No players were found with the clanname:'{clanname}'.")
         return
 
-    scores_per_player = []
     calculator = 0
     for item in top_players:
         calculator += 1
@@ -510,8 +508,8 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
         else:
             printable_text = f"    RANK: {calculator} of {item[5]}. \n  nickname: {item[0]}, \n  points: {item[1]}, \n  battles: {item[2]}, \n  winrate: 0%, \n  avrg_enemy_rank: {round(item[4], 0)}"
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
-    await ctx.send("\n".join(scores_per_player))
-    await ctx.send (f"```** Top{number} players of {clanname}! **```")
+    scores_per_player.append(f"```** TOP{number} PLAYERS OF {clanname} HAVE BEEN PRINTED! **```")
+    await ctx.respond("".join(scores_per_player))
 # leaderboard players of clan ends
 
 
@@ -519,7 +517,9 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
 # for example, user gives '/clanleaderboard 10' and bot gives scores of top10 clans
 @bot.slash_command(name="leaderboardclans", description="Print top clans in order!")
 async def leaderboardclans(ctx, number: int):
-    await ctx.respond(f"``` ** LEADERBOARD OF CLANS **```")
+    scores_per_clan = []
+    scores_per_clan.append(f"``` ** LEADERBOARD OF CLANS **```")
+
     number = int(number)
     cursor = conn.cursor()
     cursor.execute("""SELECT name, points, battles, wins, average_enemy_rank
@@ -527,7 +527,6 @@ async def leaderboardclans(ctx, number: int):
                    ORDER BY points DESC""",())
     top_clans = cursor.fetchmany(number)
 
-    scores_per_clan = []
     calculator = 0
     for item in top_clans:
         calculator += 1
@@ -537,8 +536,8 @@ async def leaderboardclans(ctx, number: int):
         else:
             printable_text = f"       RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
         scores_per_clan.append(f"``` {printable_text.center(24)} ```")
-    await ctx.send("\n".join(scores_per_clan))
-    await ctx.send(f"```  ** Top{number} clans! **```")
+    scores_per_clan.append(f"```  ** TOP{number} CLANS HAVE BEEN PRINTED! **```")
+    await ctx.respond("".join(scores_per_clan))
 # clanleaderboard ends
     
 
@@ -633,15 +632,15 @@ async def printclanwars(ctx, clanname: str, number: int):
     # print clanwar history
     if (len(clanwars) >= 1):
         scores = []
+        scores.append(f"```** {number} CLANWARS OF {clanname.upper()}: **```")
         printable_text = ""
         # war[0] = date, war[1] = challenger name, war[2] = challenger points, war[3] = defender name, war[4] = defender points
         for war in clanwars: 
             printable_text = (f"```date: {war[0]} \n{war[1]} vs {war[3]} [{war[2]}-{war[4]}]```")
             scores.append(printable_text)
 
-        await ctx.respond(f"```** {number} CLANWARS OF {clanname.upper()}: **```")
-        await ctx.send("\n".join(scores))
-        await ctx.send(f"```** {number} MOST RECENT CLANWARS OF {clanname.upper()} HAVE BEEN PRINTED! **```")
+        scores.append(f"```** {number} MOST RECENT CLANWARS OF {clanname.upper()} HAVE BEEN PRINTED! **```")
+        await ctx.respond("".join(scores))
         return
     else:
         await ctx.respond(f"```The clanwar history of clan {clanname} is currently empty! \nIf you think that there is a lack of information, please contact admins.```")
@@ -661,6 +660,7 @@ async def printclannames(ctx):
 @bot.slash_command(name="printmyduelsagainst", description="Print your latest duels against a specific opponent")
 async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
     duel_history = []
+    duel_history.append(f"```** {number} DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
@@ -691,9 +691,8 @@ async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
             else: 
                 message = f"```{duel[0]} \n{duel[2]} won vs {duel[1]}```"
                 duel_history.append(message)
-        await ctx.respond(f"```** {number} DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
-        await ctx.send("\n".join(duel_history))
-        await ctx.send(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} HAVE BEEN PRINTED!```")
+        duel_history.append(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} HAVE BEEN PRINTED!```")
+        await ctx.respond("".join(duel_history))
         return
     else:
         await ctx.respond(f"{ctx.author.mention} does not have duels against {opponent.display_name}")
@@ -705,6 +704,7 @@ async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
 @bot.slash_command(name="printmyduels", description="Print your latest duels against anyone")
 async def printmyduels(ctx, number: int):
     duel_history = []
+    duel_history.append(f"```** {number} DUELS OF {ctx.author.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
@@ -729,9 +729,8 @@ async def printmyduels(ctx, number: int):
             else: 
                 message = f"```{duel[0]} \n{duel[2]} won vs {duel[1]}```"
                 duel_history.append(message)
-        await ctx.respond(f"```** {number} DUELS OF {ctx.author.display_name.upper()} **```")
-        await ctx.send("\n".join(duel_history))
-        await ctx.send(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
+        duel_history.append(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
+        await ctx.respond("".join(duel_history))
         return
     else:
         await ctx.respond(f"{ctx.author.mention} does not have any duels!")
