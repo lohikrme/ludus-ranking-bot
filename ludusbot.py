@@ -399,7 +399,7 @@ async def changeyourclan(ctx, new_clanname: str):
     if is_registered_result:
         existing_clans = await fetchExistingClannames()
         if new_clanname not in existing_clans:
-            await ctx.respond(f"'{new_clanname}' is not part of existing clans: \n{existing_clans} \nYou may use '/registerclan' to create a new clanname.")
+            await ctx.respond(f"'{new_clanname}' is not part of existing clans: \n{existing_clans} \nPlease use '/registerclan' to create a new clanname.")
             return
         cursor = conn.cursor()
         cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -484,7 +484,7 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
     clanname = clanname.lower()
     current_clans = await fetchExistingClannames()
     if clanname not in current_clans:
-        await ctx.respond(f"```{clanname} is not part of existing clans: \n{current_clans} \nYou may use '/registerclan' to create a new clan.```")
+        await ctx.respond(f"```{clanname} is not part of existing clans: \n{current_clans} \nPlease use '/registerclan' to create a new clan.```")
         return
     number = int(number)
 
@@ -664,12 +664,12 @@ async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
-        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Use '/registerplayer'.")
+        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.")
         return
     # make sure opponent is registered before trying to find him from the database
     opponent_is_registered = await is_registered(str(opponent.id))
     if not opponent_is_registered:
-        await ctx.respond(f"{opponent.display_name} has not yet been registered. Use '/registerplayer'.")
+        await ctx.respond(f"{opponent.display_name} has not yet been registered. Please use '/registerplayer'.")
         return
 
     # fetch all duels of person and show the duels with correct nicknames
@@ -708,7 +708,7 @@ async def printmyduels(ctx, number: int):
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
-        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Use '/registerplayer'.")
+        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.")
         return
     
     # fetch all duels where challenger or opponent was author
@@ -770,7 +770,7 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: s
 
     # basis for messages
     channel_message = f"on {date.lower()}! \nat {where.lower()} \n password: {password}  \n \n{role.mention} click ⚔️ to join"
-    private_message = f"on {date}! \nPlease click ⚔️ in {ctx.guild.name} {ctx.channel.name} channel if you want to join!"
+    private_message = f"on {date}! \nPlease click ⚔️ in {ctx.guild.name} '{ctx.channel.name}' channel if you want to join!"
     
     # use embed message, otherwise cannot use bot emoticons on it to get "votes" how many will join
     channel_message_embed = discord.Embed(title=title.upper(),
@@ -812,12 +812,12 @@ async def challenge(ctx, opponent: discord.Member):
     # CHECK CHALLENGER AND OPPONENT ARE REGISTERED, OTHERWISE NOTIFY AND RETURN
     opponent_is_registered = await is_registered(str(opponent.id))
     if not opponent_is_registered:
-        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered. Use '/registerplayer'.")
+        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered. Please use '/registerplayer'.")
         return
     
     challenger_is_registered = await is_registered(str(ctx.author.id))
     if not challenger_is_registered:
-        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered. Use '/registerplayer'.")
+        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered. Please use '/registerplayer'.")
         return
     
     if (ctx.author.id in challenge_status):
