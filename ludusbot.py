@@ -275,19 +275,19 @@ async def update_player_points(challenger, opponent, challenger_win: bool):
 # GUIDE IN ENGLISH
 @bot.slash_command(name="guide", description="Teaches commands of ludus-ranking-bot with English!")
 async def guide(ctx):
-    await ctx.respond(guides.guide_eng)
+    await ctx.respond(guides.guide_eng, ephemeral=True)
 # guide in english ends
 
 # GUIDE IN RUSSIAN
 @bot.slash_command(name="гид", description="Обучает команды ludus-ranking-bot на русском языке!")
 async def гид(ctx):
-    await ctx.respond(guides.guide_rus)
+    await ctx.respond(guides.guide_rus, ephemeral=True)
 # guide in russian ends
 
 # GUIDE IN TURKISH
 @bot.slash_command(name="rehber", description="ludus-ranking-bot komutlarını İngilizce ile öğretir!")
 async def rehber(ctx):
-    await ctx.respond(guides.guide_tr)
+    await ctx.respond(guides.guide_tr, ephemeral=True)
 # guide in turkish ends
 
 # FACTUAL ENG COMMAND
@@ -320,7 +320,7 @@ async def registerplayer(ctx, nickname: str):
     # NOTIFY USER THEY ARE ALREADY REGISTERED
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
-        await ctx.respond("You have already been registered! \nIf you want to reset your rank, please contact admins.")
+        await ctx.respond("You have already been registered! \nIf you want to reset your rank, please contact admins.", ephemeral=True)
     # ADD A NEW USER
     else:
         cursor = conn.cursor()
@@ -344,7 +344,7 @@ async def registerclan(ctx, clanname: str):
     existing_clan = cursor.fetchone()
 
     if existing_clan is not None:
-        await ctx.respond(f"The clanname {clanname} already exists")
+        await ctx.respond(f"The clanname {clanname} already exists", ephemeral=True)
         return
     
     cursor.execute("INSERT INTO clans (name) VALUES (%s)", (clanname,))
@@ -388,10 +388,10 @@ async def changeyournickname(ctx, nickname: str):
         cursor.execute("SELECT nickname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
         old_nickname = cursor.fetchone()[0]
         cursor.execute("UPDATE players SET nickname = %s WHERE discord_id = %s", (nickname, str(ctx.author.id)))
-        await ctx.respond(f"Your nickname has been updated! \nOld nickname: '{old_nickname}'. \nNew nickname: '{nickname}'")
+        await ctx.respond(f"Your nickname has been updated! \nOld nickname: '{old_nickname}'. \nNew nickname: '{nickname}'", ephemeral=True)
         return
     else:
-        await ctx.respond(f"Register before using this command or contact admins.")
+        await ctx.respond(f"Please register before changing your nickname.", ephemeral=True)
         return
 # change your nickname ends
 
@@ -403,12 +403,12 @@ async def changeyourclan(ctx, new_clanname: str):
     # check if user has registered
     is_registered_result = await is_registered(str(ctx.author.id))
     if not is_registered_result:
-        await ctx.respond(f"Register before using this command or contact admins.")
+        await ctx.respond(f"Register before using this command or contact admins.", ephemeral=True)
         return
     # check that selected new clanname is registered as clan
     existing_clans = await fetchExistingClannames()
     if new_clanname not in existing_clans:
-        await ctx.respond(f"'{new_clanname}' is not part of existing clans: \n{existing_clans} \nPlease use '/registerclan' to create a new clanname.")
+        await ctx.respond(f"'{new_clanname}' is not part of existing clans: \n{existing_clans} \nPlease use '/registerclan' to create a new clanname.", ephemeral=True)
         return
     # fetch old clanname and compare it is not same as new clanname
     cursor = conn.cursor()
@@ -417,16 +417,15 @@ async def changeyourclan(ctx, new_clanname: str):
     cursor.execute("SELECT name FROM clans WHERE id = %s", (old_clan_id,))
     old_clanname = cursor.fetchone()[0]
     if (new_clanname == old_clanname):
-        await ctx.respond(f"You already belong to the clan '{new_clanname}'")
+        await ctx.respond(f"You already belong to the clan '{new_clanname}'", ephemeral=True)
         return
     # change the clanname of the user
     else:
         cursor.execute("SELECT id FROM clans WHERE name = %s", (new_clanname,))
         new_clan_id = cursor.fetchone()[0]
         cursor.execute("UPDATE players SET clan_id = (%s) WHERE players.discord_id = %s", (new_clan_id, str(ctx.author.id),))
-        await ctx.respond(f"Your clanname has been updated! \nOld clanname: '{old_clanname}'. \nNew clanname: '{new_clanname}'")
+        await ctx.respond(f"Your clanname has been updated! \nOld clanname: '{old_clanname}'. \nNew clanname: '{new_clanname}'", ephemeral=True)
         return
-        
 # change your clan ends
 
 
@@ -435,7 +434,7 @@ async def changeyourclan(ctx, new_clanname: str):
 async def myscore(ctx):
     is_registered_result = await is_registered(str(ctx.author.id))
     if not is_registered_result:
-        await ctx.respond(f"Register before using this command or contact admins.")
+        await ctx.respond(f"Please register before printing your scores.")
         return
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -493,7 +492,7 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
     clanname = clanname.lower()
     current_clans = await fetchExistingClannames()
     if clanname not in current_clans:
-        await ctx.respond(f"```{clanname} is not part of existing clans: \n{current_clans} \nPlease use '/registerclan' to create a new clan.```")
+        await ctx.respond(f"```{clanname} is not part of existing clans: \n{current_clans} \nPlease use '/registerclan' to create a new clan.```", ephemeral=True)
         return
     number = int(number)
 
@@ -505,7 +504,7 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
                    ORDER BY points DESC""",(clanname,))
     top_players = cursor.fetchmany(number)
     if (len(top_players) < 1):
-        await ctx.send(f"No players were found with the clanname:'{clanname}'.")
+        await ctx.respond(f"No players were found with the clanname:'{clanname}'.")
         return
 
     calculator = 0
@@ -550,10 +549,12 @@ async def leaderboardclans(ctx, number: int):
 # clanleaderboard ends
     
 
+clanwar_status = []
 # REPORT CLANWAR COMMAND
 @bot.slash_command(name="reportclanwar", description="Save clanwar scores permanently and gain rank for your clan!")
 async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname: str, reporter_score: int, opponent_clanname: str, opponent_score: int):
 
+    global clanwar_status
     all_admin_ids = []
     all_opponent_clanmember_ids = []
     opponent_admin_ids = []
@@ -562,13 +563,18 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
     opponent_clanname = opponent_clanname.lower()
     # store here date for storing into database
     date = datetime.datetime(1900, 1, 1)
+    
 
-    ### step1: validate that ctx.author is a registered admin
+    ### step1: validate that ctx.author is a registered admin and is not in clanwar already
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
     existing_leader = cursor.fetchone()
     if existing_leader is None:
-        await ctx.respond("```Only admins registered with '/registeradmin' can report clanwar scores!```")
+        await ctx.respond("```Only admins registered with '/registeradmin' can report clanwar scores!```", ephemeral=True)
+        return
+    
+    if (ctx.author.id in clanwar_status):
+        await ctx.respond(f"You {ctx.author.mention} are already in clanwar with some clan.", ephemeral=True)
         return
     
     ### step2: validate date
@@ -578,19 +584,19 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
     except ValueError:
         date_is_valid = False
     if date_is_valid == False:
-        await ctx.respond("```The date you gave is not a real date. Please make sure year, month and day are correct!```")
+        await ctx.respond("```The date you gave is not a real date. Please make sure year, month and day are correct!```", ephemeral=True)
         return
 
     ### step3: validate challenger and defender clannames and scores
     existing_clans = await fetchExistingClannames()
     if reporter_clanname not in existing_clans:
-        await ctx.respond(f"```The reporter_clanname {reporter_clanname} wasn't part of: \n{existing_clans}. \nIf your clan's name is missing, please use '/registerclan'```")
+        await ctx.respond(f"```The reporter_clanname {reporter_clanname} wasn't part of: \n{existing_clans}. \nIf your clan's name is missing, please use '/registerclan'```", ephemeral=True)
         return
     if opponent_clanname not in existing_clans:
-        await ctx.respond(f"```The reporter_clanname {reporter_clanname} wasn't part of: \n{existing_clans}. \nIf your clan's name is missing, please use '/registerclan'```")
+        await ctx.respond(f"```The reporter_clanname {reporter_clanname} wasn't part of: \n{existing_clans}. \nIf your clan's name is missing, please use '/registerclan'```", ephemeral=True)
         return
     if reporter_score == opponent_score:
-        await ctx.respond(f"```{reporter_score} equals {opponent_score}. \nScores may not be equal!```")
+        await ctx.respond(f"```{reporter_score} equals {opponent_score}. \nScores may not be equal!```", ephemeral=True)
         return
     
     ### step 4: check that reporter_clanname is same as author's clanname
@@ -600,7 +606,7 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
                    WHERE players.discord_id = %s""", (str(ctx.author.id),))
     authorclanname = cursor.fetchone()[0]
     if authorclanname != reporter_clanname:
-        await ctx.respond(f"Reporter_clanname did not match to author's clan. \n{ctx.author.mention} belongs to clan '{authorclanname}', \nwhile reporter_clanname was '{reporter_clanname}'")
+        await ctx.respond(f"Reporter_clanname did not match to author's clan. \n{ctx.author.mention} belongs to clan '{authorclanname}', \nwhile reporter_clanname was '{reporter_clanname}'", ephemeral=True)
         return
     
     ### step 5: check that opponent_clanname has a registered admin, and store id for later use
@@ -625,11 +631,13 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
             opponent_admin_ids.append(admin_id)
 
     if len(opponent_admin_ids) < 1:
-        await ctx.respond ("Opponent clan does not have a registered admin! They need one to confirm the clanwar results.")
+        await ctx.respond ("Opponent clan does not have a registered admin! They need one to confirm the clanwar results.", ephemeral=True)
         return
 
 
     ### step 6: send approval message to all opponent admins, or cancel after 24h wait time automatically
+    clanwar_status.append(ctx.author.id)
+
     await ctx.respond(embed=discord.Embed(title="", description=f"Waiting for opponent clan's admins to confirm: \n{reporter_clanname} vs {opponent_clanname} \n{reporter_score}-{opponent_score}"))
 
     async def send_approval_message(admin_id, ctx, opponent_admin_ids, reporter_clanname, reporter_score, opponent_clanname, opponent_score, stop_listening_emoticons_event):
@@ -655,6 +663,7 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
             if (stop_listening_emoticons_event.is_set()):
                 return
             stop_listening_emoticons_event.set()
+            clanwar_status.remove(ctx.author.id)
             ### step7: if all previous is ok, store given data into clanwars datatable
             cursor.execute("SELECT id from clans WHERE name = %s", (reporter_clanname,))
             challenger_clan_id = cursor.fetchone()[0]
@@ -696,6 +705,7 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
             if (stop_listening_emoticons_event.is_set()):
                 return
             stop_listening_emoticons_event.set()
+            clanwar_status.remove(ctx.author.id)
             await ctx.respond("Enemy admins have disagreed with the clanwar scores!")
             for id in opponent_admin_ids:
                 user = await bot.fetch_user(id)
@@ -739,7 +749,7 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
         return
     
     if (ctx.author.id in ft7_status):
-        await ctx.respond(f"You {ctx.author.mention} have already challenged somebody.", ephemeral=True)
+        await ctx.respond(f"You {ctx.author.mention} are already in ft7 with somebody.", ephemeral=True)
         return
 
     # step 3: program begins! add author to ft7_status to prevent spam
@@ -756,9 +766,10 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
     await approval_msg.add_reaction("🚫")
 
     try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=3600.0, check=lambda reaction, user: user == opponent and str(reaction.emoji) in ["✅", "🚫"] and reaction.message.id == approval_msg.id)
+        reaction, user = await bot.wait_for('reaction_add', timeout=300.0, check=lambda reaction, user: user == opponent and str(reaction.emoji) in ["✅", "🚫"] and reaction.message.id == approval_msg.id)
     except asyncio.TimeoutError:
-        await opponent.send(f"ft7 reporting expired!")
+        await opponent.send(f"FT7 {ctx.author.display_name} vs {opponent.display_name} expired!")
+        await ctx.author.send(f"FT7 {ctx.author.display_name} vs {opponent.display_name} expired!")
         return
     except asyncio.CancelledError:
         return
@@ -826,7 +837,7 @@ async def printclanwars(ctx, clanname: str, number: int):
     clanname = clanname.lower()
     existing_clans = await fetchExistingClannames()
     if clanname not in existing_clans:
-        await ctx.respond(f"```{clanname} is not part of existing clans: \n{existing_clans} \nYou may use '/registerclan' to create a new clan.```")
+        await ctx.respond(f"```{clanname} is not part of existing clans: \n{existing_clans} \nYou may use '/registerclan' to create a new clan.```", ephemeral=True)
         return
     
     # first fetch the id of given clan, so it will be easier to find all clanwars containing that id in challenger or defender
@@ -863,7 +874,7 @@ async def printclanwars(ctx, clanname: str, number: int):
 @bot.slash_command(name="printclannames", description="Print all existing clannames")
 async def printclannames(ctx):
     existing_clans = await fetchExistingClannames()
-    await ctx.respond(f"Currently existing clans are next: \n{existing_clans} \n If you miss a clan, use '/registerclan'!")
+    await ctx.respond(f"Currently existing clans are next: \n{existing_clans} \n If you miss a clan, please use '/registerclan'!")
 # print clannames ends
 
 
@@ -875,12 +886,12 @@ async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
-        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.")
+        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
         return
     # make sure opponent is registered before trying to find him from the database
     opponent_is_registered = await is_registered(str(opponent.id))
     if not opponent_is_registered:
-        await ctx.respond(f"{opponent.display_name} has not yet been registered. Please use '/registerplayer'.")
+        await ctx.respond(f"{opponent.display_name} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
         return
 
     # fetch all duels of person and show the duels with correct nicknames
@@ -915,7 +926,7 @@ async def printmyduels(ctx, number: int):
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
-        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.")
+        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
         return
     
     # fetch all duels where challenger or opponent was author
@@ -973,7 +984,7 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: s
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
     existing_leader = cursor.fetchone()
     if existing_leader is None:
-        await ctx.respond("```Only admins registered with '/registeradmin' can announce events!```")
+        await ctx.respond("```Only admins registered with '/registeradmin' can announce events!```", ephemeral=True)
         return
     await ctx.respond(f".")
 
