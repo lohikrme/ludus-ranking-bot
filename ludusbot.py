@@ -45,11 +45,11 @@ async def on_connect():
 # -------- PRIVATE FUNCTIONS -----------
 
 # USE THIS TO UPDATE DUELS DATATABLE HISTORY
-async def update_duels_history(challenger_discord_id: str, opponent_discord_id: str, challenger_won: bool):
+async def update_duels_history(challenger_discord_id: str, opponent_discord_id: str, challenger_score: int, opponent_score: int):
     date = datetime.datetime.now()
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO duels (date, challenger_discord_id, opponent_discord_id, challenger_won) VALUES (%s, %s, %s, %s)", (date, challenger_discord_id, opponent_discord_id, challenger_won))
+    cursor.execute("INSERT INTO duels (date, challenger_discord_id, opponent_discord_id, challenger_score, opponent_score) VALUES (%s, %s, %s, %s, %s,)", (date, challenger_discord_id, opponent_discord_id, challenger_score, opponent_score))
 # update duels history ends  
   
 
@@ -550,15 +550,9 @@ async def leaderboardclans(ctx, number: int):
 # clanleaderboard ends
     
 
-reportclanwar_current_id = 0
-reportclanwar_max_id = 1000000
-
 # REPORT CLANWAR COMMAND
 @bot.slash_command(name="reportclanwar", description="Save clanwar scores permanently and gain rank for your clan!")
 async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname: str, reporter_score: int, opponent_clanname: str, opponent_score: int):
-    
-    global reportclanwar_current_id
-    reportclanwar_current_id = (reportclanwar_current_id + 1) % reportclanwar_max_id
 
     all_admin_ids = []
     all_opponent_clanmember_ids = []
@@ -568,6 +562,7 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
     opponent_clanname = opponent_clanname.lower()
     # store here date for storing into database
     date = datetime.datetime(1900, 1, 1)
+
     ### step1: validate that ctx.author is a registered admin
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
@@ -575,6 +570,7 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
     if existing_leader is None:
         await ctx.respond("```Only admins registered with '/registeradmin' can report clanwar scores!```")
         return
+    
     ### step2: validate date
     date_is_valid = True
     try:
@@ -635,7 +631,6 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
 
     ### step 6: send approval message to all opponent admins, or cancel after 24h wait time automatically
     await ctx.respond(embed=discord.Embed(title="", description=f"Waiting for opponent clan's admins to confirm: \n{reporter_clanname} vs {opponent_clanname} \n{reporter_score}-{opponent_score}"))
-    opponent_admin_ids.append("653651682135113758")
 
     async def send_approval_message(admin_id, ctx, opponent_admin_ids, reporter_clanname, reporter_score, opponent_clanname, opponent_score, stop_listening_emoticons_event):
         opponent_admin = await bot.fetch_user(admin_id)
@@ -714,6 +709,117 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
 # reportclanwar ends
 
 
+
+ft7_status = []
+# REPORTFT7 COMMAND
+@bot.slash_command(name="reportft7", description="Discreetly via private chat save duel ft7 scores permanently and gain personal ranking points!")
+async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score: int):
+
+    global ft7_status
+
+    # step 0: check opponent is different than challenger
+    if (opponent.id == ctx.author.id):
+        await ctx.respond("You may not ft7 yourself!", ephemeral=True)
+        return
+    
+    # step 1: check challenger and opponent are registered
+    challenger_is_registered = await is_registered(str(ctx.author.id))
+    if not challenger_is_registered:
+        await ctx.respond("You have not been registered. Please use '/registerplayer' before reportduel.", ephemeral=True)
+        return
+    
+    opponent_is_registered = await is_registered(str(opponent.id))
+    if not opponent_is_registered:
+        await ctx.respond(f"Your opponent {opponent.display_name} has not been registered. Please use '/registerplayer'.", ephemeral=True)
+        return
+    
+    # step 2: check that scores are not equal, and challenger is not already in ft7 (to avoid spam)
+    if my_score == opponent_score:
+        await ctx.respond(f"Your score {my_score} and opponent score {opponent_score} are equal. Stalemate is not counted.", ephemeral=True)
+        return
+    
+    if (ctx.author.id in ft7_status):
+        await ctx.respond(f"You {ctx.author.mention} have already challenged somebody.", ephemeral=True)
+        return
+
+    # step 3: program begins! add author to ft7_status to prevent spam
+    ft7_status.append(ctx.author.id)
+    await ctx.respond(f"Please wait for {opponent.display_name} to verify the ft7 scores!", ephemeral=True)
+
+    # step 4: send to opponent private embed message which asks for approval of scores
+    approval_embed = discord.Embed(
+        title=f"Confirm ft7 results:",
+        description=f"{ctx.author.display_name} vs {opponent.display_name} \n{my_score}-{opponent_score}\n click ✅approve   🚫disagree."
+    )
+    approval_msg = await opponent.send(embed=approval_embed)
+    await approval_msg.add_reaction("✅")
+    await approval_msg.add_reaction("🚫")
+
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=3600.0, check=lambda reaction, user: user == opponent and str(reaction.emoji) in ["✅", "🚫"] and reaction.message.id == approval_msg.id)
+    except asyncio.TimeoutError:
+        await opponent.send(f"ft7 reporting expired!")
+        return
+    except asyncio.CancelledError:
+        return
+
+    # step 5: if scores are approved, calculate winner
+    if str(reaction.emoji) == "✅":
+        challenger_won = False
+        if my_score > opponent_score:
+            challenger_won = True
+
+        # step 6: store scores and ranks into database
+        if challenger_won:
+            await update_player_points(ctx.author, opponent, True)
+            await update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
+        else:
+            await update_player_points(ctx.author, opponent, False)
+            await update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
+
+        # step 7: notify users of their new points and pointchange
+        if challenger_won:
+            ft7_status.remove(ctx.author.id)
+            cursor = conn.cursor()
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+            challenger_points = cursor.fetchone()
+            challenger_new_points = challenger_points[0]
+            challenger_old_points = challenger_points[1]
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
+            opponent_points = cursor.fetchone()
+            opponent_new_points = opponent_points[0]
+            opponent_old_points = opponent_points[1]
+            challenger_win_embed = discord.Embed(title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
+                                                description=f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
+            await ctx.author.send(embed=challenger_win_embed)
+            await opponent.send(embed=challenger_win_embed)
+            return
+        
+        else:
+            ft7_status.remove(ctx.author.id)
+            cursor = conn.cursor()
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+            challenger_points = cursor.fetchone()
+            challenger_new_points = challenger_points[0]
+            challenger_old_points = challenger_points[1]
+            cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
+            opponent_points = cursor.fetchone()
+            opponent_new_points = opponent_points[0]
+            opponent_old_points = opponent_points[1]
+            defender_win_embed = discord.Embed(title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
+                                                description=f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
+            await ctx.author.send(embed=defender_win_embed)
+            await opponent.send(embed=defender_win_embed)
+            return
+
+    # step 8: if scores are disagreed, notify challenger that opponent disagrees and interact with opponent
+    if str(reaction.emoji) == "🚫":
+        await ctx.author.send(f"{opponent.display_name} has disagreed with your ft7 scores!")
+        await opponent.send(f"You have disagreed with {ctx.author.display_name}'s ft7 scores ")
+        return
+# report ft7 ends
+
+
 # PRINTCLANWARS COMMAND
 @bot.slash_command(name="printclanwars", description="Print clanwar scores of a selected clanname")
 async def printclanwars(ctx, clanname: str, number: int):
@@ -763,9 +869,9 @@ async def printclannames(ctx):
 
 # PRINTMYDUELSAGAINST COMMAND
 @bot.slash_command(name="printmyduelsagainst", description="Print your latest duels against a specific opponent")
-async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
+async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
     duel_history = []
-    duel_history.append(f"```** {number} DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
+    duel_history.append(f"```** {number} FT7s OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
@@ -780,7 +886,7 @@ async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
     # fetch all duels of person and show the duels with correct nicknames
     # note that author can be either challenger or opponent in the database
     cursor = conn.cursor()
-    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_won
+    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_score, duels.opponent_score
                    FROM duels
                    LEFT JOIN players AS challenger_player ON duels.challenger_discord_id = challenger_player.discord_id
                    LEFT JOIN players AS opponent_player ON duels.opponent_discord_id = opponent_player.discord_id
@@ -789,14 +895,10 @@ async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
                    ORDER BY duels.date DESC""", (str(ctx.author.id), str(opponent.id), str(ctx.author.id), str(opponent.id),))
     duels = cursor.fetchmany(number)
     if len(duels) >= 1:
-        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_won
-            if duel[3] == True:
-                message = f"```{duel[0]} \n{duel[1]} won vs {duel[2]}```"
-                duel_history.append(message)
-            else: 
-                message = f"```{duel[0]} \n{duel[2]} won vs {duel[1]}```"
-                duel_history.append(message)
-        duel_history.append(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} HAVE BEEN PRINTED!```")
+        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_score, 4 = opponent_score
+            message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
+            duel_history.append(message)
+        duel_history.append(f"```{number} MOST RECENT FT7s OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} HAVE BEEN PRINTED!```")
         await ctx.respond("".join(duel_history))
         return
     else:
@@ -809,7 +911,7 @@ async def printmyduelsagainst(ctx, opponent: discord.Member, number: int):
 @bot.slash_command(name="printmyduels", description="Print your latest duels against anyone")
 async def printmyduels(ctx, number: int):
     duel_history = []
-    duel_history.append(f"```** {number} DUELS OF {ctx.author.display_name.upper()} **```")
+    duel_history.append(f"```** {number} FT7's OF {ctx.author.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
@@ -818,7 +920,7 @@ async def printmyduels(ctx, number: int):
     
     # fetch all duels where challenger or opponent was author
     cursor = conn.cursor()
-    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_won
+    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_score, duels.opponent_score
                    FROM duels
                    LEFT JOIN players AS challenger_player ON duels.challenger_discord_id = challenger_player.discord_id
                    LEFT JOIN players AS opponent_player ON duels.opponent_discord_id = opponent_player.discord_id
@@ -827,14 +929,10 @@ async def printmyduels(ctx, number: int):
     duels = cursor.fetchmany(number)
 
     if len(duels) >= 1:
-        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_won
-            if duel[3] == True:
-                message = f"```{duel[0]} \n{duel[1]} won vs {duel[2]}```"
-                duel_history.append(message)
-            else: 
-                message = f"```{duel[0]} \n{duel[2]} won vs {duel[1]}```"
-                duel_history.append(message)
-        duel_history.append(f"```{number} MOST RECENT DUELS OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
+        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_score, 4 = opponent_score
+            message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
+            duel_history.append(message)
+        duel_history.append(f"```{number} MOST RECENT FT7's OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
         await ctx.respond("".join(duel_history))
         return
     else:
@@ -907,99 +1005,6 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: s
     print(f"All members of {ctx.guild.name} have been messaged about the coming event of {title}!")
     return
 # event announce ends
-
-
-# CHALLENGE COMMAND
-challenge_status = []
-@bot.slash_command(name="challenge", description="Challenge enemy player to duel and gain rank!")
-async def challenge(ctx, opponent: discord.Member):
-    global challenge_status
-
-    # CHECK NOT CHALLENGE ONESELF
-    if (opponent.id == ctx.author.id):
-        await ctx.respond("You may not challenge yourself!")
-        return
-
-    # CHECK CHALLENGER AND OPPONENT ARE REGISTERED, OTHERWISE NOTIFY AND RETURN
-    opponent_is_registered = await is_registered(str(opponent.id))
-    if not opponent_is_registered:
-        await ctx.respond(f"The opponent {opponent.mention} has not yet been registered. Please use '/registerplayer'.")
-        return
-    
-    challenger_is_registered = await is_registered(str(ctx.author.id))
-    if not challenger_is_registered:
-        await ctx.respond(f"The challenger {ctx.author.mention} has not yet been registered. Please use '/registerplayer'.")
-        return
-    
-    if (ctx.author.id in challenge_status):
-        await ctx.respond(f"You {ctx.author.mention} have already challenged somebody.")
-        return
-    
-    # THE REAL CHALLENGE FUNCTION BEGINS HERE
-    await ctx.respond(".")
-    # keep track that person cannot do more than 1 challenge at time
-    challenge_status.append(ctx.author.id)
-
-    # Step 1: Initial Challenge Message
-    challenge_embed = discord.Embed(title=f"{ctx.author.display_name} has challenged {opponent.display_name} to ft7!",
-                                    description=f"{opponent.mention} can select: \n*  🗡️{ctx.author.display_name} won \n*  🏰{opponent.display_name} won \n*  🚫refuse.")
-    challenge_msg = await ctx.send(embed=challenge_embed)
-
-    # Add reactions for Challenger won, Opponent won, Refuse
-    await challenge_msg.add_reaction("🗡️")  # Challenger won
-    await challenge_msg.add_reaction("🏰")  # Opponent won
-    await challenge_msg.add_reaction("🚫")  # refuse
-
-    # Wait for a reaction from only opponent reactions count
-    try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=lambda r, u: u == opponent and str(r.emoji) in ["🗡️", "🏰", "🚫"])
-    except asyncio.TimeoutError:
-        challenge_status.remove(ctx.author.id)
-        await ctx.send(f"{ctx.author.mention}'s challenge against {opponent.display_name} expired.")
-        return
-
-    # HANDLE REACTIONS
-    # challenger won
-    if str(reaction.emoji) == "🗡️":
-        challenge_status.remove(ctx.author.id)
-        await update_player_points(ctx.author, opponent, True)
-        await update_duels_history(str(ctx.author.id), str(opponent.id), True)
-        # notify users of their new points and pointchange
-        cursor = conn.cursor()
-        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
-        challenger_points = cursor.fetchone()
-        challenger_new_points = challenger_points[0]
-        challenger_old_points = challenger_points[1]
-        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
-        opponent_points = cursor.fetchone()
-        opponent_new_points = opponent_points[0]
-        opponent_old_points = opponent_points[1]
-        challenger_win_embed = discord.Embed(title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
-                                            description=f"{ctx.author.mention} new points: {challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n{opponent.mention} new points: {opponent_new_points}(-{opponent_old_points - opponent_new_points})")
-        await ctx.send(embed=challenger_win_embed)
-    # opponent won
-    elif str(reaction.emoji) == "🏰":
-        challenge_status.remove(ctx.author.id)
-        await update_player_points(ctx.author, opponent, False)
-        await update_duels_history(str(ctx.author.id), str(opponent.id), False)
-        # notify users of their new points and pointchange
-        cursor = conn.cursor()
-        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(ctx.author.id),))
-        challenger_points = cursor.fetchone()
-        challenger_new_points = challenger_points[0]
-        challenger_old_points = challenger_points[1]
-        cursor.execute("SELECT points, old_points FROM players WHERE discord_id = %s", (str(opponent.id),))
-        opponent_points = cursor.fetchone()
-        opponent_new_points = opponent_points[0]
-        opponent_old_points = opponent_points[1]
-        defender_win_embed = discord.Embed(title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
-                                            description=f"{opponent.mention} new points: {opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n{ctx.author.mention} new points: {challenger_new_points}(-{challenger_old_points - challenger_new_points})")
-        await ctx.send(embed=defender_win_embed)
-    # refuse duel
-    elif str(reaction.emoji) == "🚫":
-        challenge_status.remove(ctx.author.id)
-        await ctx.send(f"The FT7 has been refused!")
-# challenge ends
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
