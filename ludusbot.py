@@ -1,5 +1,5 @@
 # ludusbot.py
-# Made by Chinese Parrot 25th july 2024
+# updated 18th septemper 2024
 
 import random
 import psycopg2
@@ -26,18 +26,41 @@ intents = discord.Intents.default()
 intents.message_content = True 
 intents.members = True
 
-bot = commands.Bot(command_prefix='/', intents=intents)  # use slash as start of command
+bot = commands.Bot(command_prefix='!', intents=intents)  # use slash as start of command
 
-guilds = [
-    1060303582487908423, # middle-earth
-    1194360639544635482 # legion
-]
+# keep these guilds real time, but store permanently in database
+current_guild_ids = []
+
+# return integer array of guild ids from database
+async def fetch_all_guild_ids():
+    ids = []
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM guilds", ())
+    all_guild_ids = cursor.fetchall()
+    for id in all_guild_ids:
+        ids.append(int(id[0]))
+    return ids
+
+@bot.event
+async def on_guild_join(guild):
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO guilds (id, name) VALUES (%s, %s,) ON CONFLICT (id) DO NOTHING", (str(guild.id), str(guild.name),))
+    current_guild_ids.append(guild.id)
+    await bot.sync_commands(guild_ids=current_guild_ids)
+
+@bot.event
+async def on_guild_remove(guild):
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM guilds WHERE id = %s", (str(guild.id),))
+    current_guild_ids.remove(guild.id)
+    await bot.sync_commands(guild_ids=current_guild_ids)
 
 # BOT ENTERS THE CHANNEL
 @bot.event
 async def on_connect():
+    current_guild_ids = await fetch_all_guild_ids()
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
-    await bot.sync_commands(guild_ids=guilds)
+    await bot.sync_commands(guild_ids=current_guild_ids)
     print("Slash commands have been cleared and updated... Wait a bit more before bot is ready...")
     print("Bot is finally ready to function!")
 
