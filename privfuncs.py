@@ -75,7 +75,7 @@ async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
     # make sure challenger is registered before trying to find him from the database
     author_is_registered = await is_registered(str(ctx.author.id))
     if not author_is_registered:
-        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
+        await ctx.respond(f"You have not been registered yet! Please use '/registerplayer'.", ephemeral=True)
         return
     # make sure opponent is registered before trying to find him from the database
     opponent_is_registered = await is_registered(str(opponent.id))
@@ -94,7 +94,7 @@ async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
                    AND (opponent_player.discord_id = %s OR opponent_player.discord_id = %s)
                    ORDER BY duels.date DESC""", (str(ctx.author.id), str(opponent.id), str(ctx.author.id), str(opponent.id),))
     duels = cursor.fetchmany(number)
-    if len(duels) < 2:
+    if len(duels) < 1:
         await ctx.respond(f"{ctx.author.mention} does not have duels against {opponent.display_name}")
         return
 

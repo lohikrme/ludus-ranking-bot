@@ -247,9 +247,11 @@ async def myscore(ctx):
 
 # LEADERBOARD PLAYERS OF CLAN COMMAND
 @bot.slash_command(name="leaderboardplayers", description="Print top players of a specific clan (or all clans)!")
-async def leaderboardplayers(ctx, number: int, clanname: discord.Option(str, "'all' if you want all clans", default='all')):
+@discord.option("number", int, description="number of players to print")
+@discord.option("clanname", str, description="'Please leave the clanname empty if you want to print players of all clans!", default=None)
+async def leaderboardplayers(ctx, number: int, clanname: str):
     # print all players of all clans
-    if (clanname == 'all' or clanname==''):
+    if (clanname == None):
         await leaderboard_allplayers(ctx, number)
         return
 
@@ -292,6 +294,7 @@ async def leaderboardplayers(ctx, number: int, clanname: discord.Option(str, "'a
 # LEADERBOARD CLAN COMMAND
 # for example, user gives '/clanleaderboard 10' and bot gives scores of top10 clans
 @bot.slash_command(name="leaderboardclans", description="Print top clans in order!")
+@discord.option("number", int, description="number of clans to print")
 async def leaderboardclans(ctx, number: int):
     scores_per_clan = []
     scores_per_clan.append(f"``` ** LEADERBOARD CLANS **```")
@@ -601,6 +604,7 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
 
 # PRINTCLANWARS COMMAND
 @bot.slash_command(name="printclanwars", description="Print clanwar scores of a selected clanname")
+@discord.option("number", int, description="number of clanwars to print")
 async def printclanwars(ctx, clanname: str, number: int):
     clanname = clanname.lower()
     existing_clans = await fetchExistingClannames()
@@ -633,7 +637,7 @@ async def printclanwars(ctx, clanname: str, number: int):
         await ctx.respond("".join(scores))
         return
     else:
-        await ctx.respond(f"```The clanwar history of clan {clanname} is currently empty! \nIf you think that there is a lack of information, please contact admins.```")
+        await ctx.respond(f"```Currently there are no reported clanwars by {clanname}! Please use '/reportclanwar'.```")
         return
 # print clan wars ends
 
@@ -649,7 +653,9 @@ async def printclans(ctx):
 
 # PRINTMYDUELS
 @bot.slash_command(name="printmyduels", description="Print your latest duels against a specific opponent or every opponent")
-async def printmyduels(ctx, number: int, opponent: discord.Option(discord.Member, "select opponent if u want to print duels against a specific opponent", default=None)):
+@discord.option("number", int, description="number of ft7 to print")
+@discord.option("opponent", discord.Member, description="'Please leave the opponent empty if you want to print against all players", default=None)
+async def printmyduels(ctx, number: int, opponent: discord.Member):
     if (opponent!=None):
         await printmyduelssagainst(ctx, opponent, number)
         return
@@ -676,9 +682,9 @@ async def printmyduels(ctx, number: int, opponent: discord.Option(discord.Member
         return
     
     for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_score, 4 = opponent_score
-        message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
+        message = f"```{duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
         duel_history.append(message)
-    duel_history.append(f"```{number} MOST RECENT FT7's OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
+    duel_history.append(f"```{number} MOST RECENT FT7'S OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
     await ctx.respond("".join(duel_history))
     return
         
