@@ -1,5 +1,5 @@
 # requirements.txt
-# 21th august 2024
+# 21th septemper 2024
 
 # you can download the requirements using:
 # pip install -r requirements.txt
@@ -13,7 +13,7 @@
 # 'pip list'
 
 # python version:
-python_version >= 3.8
+# python==3.11.1
 
 # required libraries
 py-cord==2.6.0

@@ -1,25 +1,18 @@
 # ludusbot.py
-# updated 18th septemper 2024
+# updated 21th septemper 2024
 
-import random
-import psycopg2
-import discord
 import settings
+import random
+import discord
 import facts
 import guides
 from discord.ext import commands
 import asyncio
 import datetime
+from services import conn
+from privfuncs import update_duels_history, is_registered, fetchExistingClannames, leaderboard_allplayers, printmyduelssagainst, update_clan_points, update_player_points
 
-# OPEN THE CONNECTION TO THE DATABASE
-conn = psycopg2.connect(
-        database = settings.db_name,
-        user = settings.db_user,
-        password = settings.db_password,
-        host = settings.db_host,
-        port = settings.db_port
-)
-conn.autocommit = True
+
 
 # GIVE BOT DEFAULT INTENTS + ACCESS TO MESSAGE CONTENT AND MEMBERS AND SET COMMAND PREFIX TO BE '/'
 intents = discord.Intents.default()  
@@ -44,7 +37,7 @@ async def fetch_all_guild_ids():
 @bot.event
 async def on_guild_join(guild):
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO guilds (id, name) VALUES (%s, %s,) ON CONFLICT (id) DO NOTHING", (str(guild.id), str(guild.name),))
+    cursor.execute("INSERT INTO guilds (id, name) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING", (str(guild.id), str(guild.name),))
     current_guild_ids.append(guild.id)
     await bot.sync_commands(guild_ids=current_guild_ids)
 
@@ -63,233 +56,6 @@ async def on_connect():
     await bot.sync_commands(guild_ids=current_guild_ids)
     print("Slash commands have been cleared and updated... Wait a bit more before bot is ready...")
     print("Bot is finally ready to function!")
-
-
-# -------- PRIVATE FUNCTIONS -----------
-
-# USE THIS TO UPDATE DUELS DATATABLE HISTORY
-async def update_duels_history(challenger_discord_id: str, opponent_discord_id: str, challenger_score: int, opponent_score: int):
-    date = datetime.datetime.now()
-    date = date.strftime('%Y-%m-%d %H:%M:%S')
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO duels (date, challenger_discord_id, opponent_discord_id, challenger_score, opponent_score) VALUES (%s, %s, %s, %s, %s,)", (date, challenger_discord_id, opponent_discord_id, challenger_score, opponent_score))
-# update duels history ends  
-  
-
-# USE THIS TO CHECK IF USER REGISTERED
-async def is_registered(discord_id: str):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players WHERE discord_id = %s", (discord_id,))
-    existing_user = cursor.fetchone()
-
-    if existing_user is not None: # user is registered
-        return True
-    
-    return False # user is not registered
-# is registered ends
-
-
-# USE TO INFO USER OF EXISTING CLANNAMES
-async def fetchExistingClannames():
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM clans", ())
-    clannames = cursor.fetchall()
-    current_clans = []
-    for item in clannames:
-        current_clans.append(item[0])
-    return current_clans
-# fetch existing clannames ends
-
-
-# UPDATE CLAN POINTS IN DATABASE
-async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, challenger_win: bool):
-    # these can be updated as need
-    standard_point_change = 20
-    point_level_divident = 60
-    minimum_point_change = 2
-
-    # fetch current points from database
-    cursor = conn.cursor()
-    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM clans WHERE id = %s", (challenger_clan_id,))
-    result = cursor.fetchone()
-    challenger_stats = {
-        'battles': result[0],
-        'wins': result[1],
-        'average_enemy_rank': result[2],
-        'current_points': result[3]
-    }
-    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM clans WHERE id = %s", (defender_clan_id,))
-    result = cursor.fetchone()
-    defender_stats = {
-        'battles': result[0],
-        'wins': result[1],
-        'average_enemy_rank': result[2],
-        'current_points': result[3]
-    }
-    
-    # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY 100p DIFFERENCES (POINT_lEVELS) THERE ARE
-    point_difference = abs(challenger_stats['current_points'] - defender_stats['current_points'])
-
-    point_levels = point_difference // point_level_divident
-
-    # INITIATE NEW POINTS, AND THEN CALCULATE THE NEW POINTS BASED ON THE FORMULA
-    challenger_new_points = challenger_stats['current_points']
-    opponent_new_points = defender_stats['current_points']
-
-    # IF CHALLENGER WINS
-    if challenger_win:
-        # update both clans battles, wins, average_enemy_rank
-        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + defender_stats["current_points"]) / (challenger_stats["battles"] + 1)
-        challenger_stats["battles"] = challenger_stats["battles"] + 1
-        challenger_stats["wins"] = challenger_stats["wins"] + 1
-
-        defender_stats["average_enemy_rank"] = (defender_stats["battles"] * defender_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (defender_stats["battles"] + 1)
-        defender_stats["battles"] = defender_stats["battles"] + 1
-
-        # solve point change amount for both players
-        if challenger_stats['current_points'] > defender_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, minimum_point_change)
-            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
-            opponent_new_points = defender_stats['current_points'] - point_change # opponent loses points
-
-        elif challenger_stats['current_points'] < defender_stats['current_points']:
-            point_change = standard_point_change + point_levels
-            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
-            opponent_new_points = defender_stats['current_points'] - point_change # opponent loses points
-
-        else:
-            challenger_new_points = challenger_stats['current_points'] + standard_point_change
-            opponent_new_points = defender_stats['current_points'] - standard_point_change
-
-    # IF DEFENDER WINS
-    else:
-        # update both players battles, wins, average_enemy_rank
-        defender_stats["average_enemy_rank"] = (defender_stats["battles"] * defender_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (defender_stats["battles"] + 1)
-        defender_stats["battles"] = defender_stats["battles"] + 1
-        defender_stats["wins"] = defender_stats["wins"] + 1
-
-        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + defender_stats["current_points"]) / (challenger_stats["battles"] + 1)
-        challenger_stats["battles"] = challenger_stats["battles"] + 1
-
-        # solve point change amount for both players
-        if challenger_stats['current_points'] > defender_stats['current_points']:
-            point_change = standard_point_change + point_levels
-            opponent_new_points = defender_stats['current_points'] + point_change # opponent gains points
-            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
-            
-        elif challenger_stats['current_points'] < defender_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, minimum_point_change)
-            opponent_new_points = defender_stats['current_points'] + point_change # opponent gains points
-            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
-
-        else:
-            challenger_new_points = challenger_stats['current_points'] - standard_point_change
-            opponent_new_points = defender_stats['current_points'] + standard_point_change
-    
-    # STORE THE NEW_POINTS TO DATABASE AS POINTS, AND CURRENT_POINTS AS OLD_POINTS
-
-    # update challenger points
-    cursor.execute("UPDATE clans SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE id = %s", (challenger_stats['battles'], challenger_stats['wins'], challenger_stats['average_enemy_rank'], challenger_new_points, challenger_stats['current_points'], challenger_clan_id,))
-    # update defender points
-    cursor.execute("UPDATE clans SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE id = %s", (defender_stats['battles'], defender_stats['wins'], defender_stats['average_enemy_rank'], opponent_new_points, defender_stats['current_points'], defender_clan_id,))
-    return 
-# update clan points ends
-
-
-# UPDATE PLAYER POINTS IN DATABASE
-async def update_player_points(challenger, opponent, challenger_win: bool):
-
-    # these can be updated as need
-    standard_point_change = 20
-    point_level_divident = 60
-    minimum_point_change = 2
-
-    # fetch current points from database
-    cursor = conn.cursor()
-    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s", (str(challenger.id),))
-    result = cursor.fetchone()
-    challenger_stats = {
-        'battles': result[0],
-        'wins': result[1],
-        'average_enemy_rank': result[2],
-        'current_points': result[3]
-    }
-    cursor.execute("SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s", (str(opponent.id),))
-    result = cursor.fetchone()
-    opponent_stats = {
-        'battles': result[0],
-        'wins': result[1],
-        'average_enemy_rank': result[2],
-        'current_points': result[3]
-    }
-    
-    # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY 100p DIFFERENCES (POINT_lEVELS) THERE ARE
-    point_difference = abs(challenger_stats['current_points'] - opponent_stats['current_points'])
-
-    point_levels = point_difference // point_level_divident
-
-
-    # INITIATE NEW POINTS, AND THEN CALCULATE THE NEW POINTS BASED ON THE FORMULA
-    challenger_new_points = challenger_stats['current_points']
-    opponent_new_points = opponent_stats['current_points']
-
-    # IF CHALLENGER WINS
-    if challenger_win:
-        # update both players battles, wins, average_enemy_rank
-        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + opponent_stats["current_points"]) / (challenger_stats["battles"] + 1)
-        challenger_stats["battles"] = challenger_stats["battles"] + 1
-        challenger_stats["wins"] = challenger_stats["wins"] + 1
-
-        opponent_stats["average_enemy_rank"] = (opponent_stats["battles"] * opponent_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (opponent_stats["battles"] + 1)
-        opponent_stats["battles"] = opponent_stats["battles"] + 1
-
-        # solve point change amount for both players
-        if challenger_stats['current_points'] > opponent_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, minimum_point_change)
-            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
-            opponent_new_points = opponent_stats['current_points'] - point_change # opponent loses points
-
-        elif challenger_stats['current_points'] < opponent_stats['current_points']:
-            point_change = standard_point_change + point_levels
-            challenger_new_points = challenger_stats['current_points'] + point_change # challenger gains points
-            opponent_new_points = opponent_stats['current_points'] - point_change # opponent loses points
-
-        else:
-            challenger_new_points = challenger_stats['current_points'] + standard_point_change
-            opponent_new_points = opponent_stats['current_points'] - standard_point_change
-
-    # IF OPPONENT WINS
-    else:
-        # update both players battles, wins, average_enemy_rank
-        opponent_stats["average_enemy_rank"] = (opponent_stats["battles"] * opponent_stats["average_enemy_rank"] + challenger_stats["current_points"]) / (opponent_stats["battles"] + 1)
-        opponent_stats["battles"] = opponent_stats["battles"] + 1
-        opponent_stats["wins"] = opponent_stats["wins"] + 1
-
-        challenger_stats["average_enemy_rank"] = (challenger_stats["battles"] * challenger_stats["average_enemy_rank"] + opponent_stats["current_points"]) / (challenger_stats["battles"] + 1)
-        challenger_stats["battles"] = challenger_stats["battles"] + 1
-
-        # solve point change amount for both players
-        if challenger_stats['current_points'] > opponent_stats['current_points']:
-            point_change = standard_point_change + point_levels
-            opponent_new_points = opponent_stats['current_points'] + point_change # opponent gains points
-            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
-            
-        elif challenger_stats['current_points'] < opponent_stats['current_points']:
-            point_change = max(standard_point_change - point_levels, minimum_point_change)
-            opponent_new_points = opponent_stats['current_points'] + point_change # opponent gains points
-            challenger_new_points = challenger_stats['current_points'] - point_change # challenger loses points
-
-        else:
-            challenger_new_points = challenger_stats['current_points'] - standard_point_change
-            opponent_new_points = opponent_stats['current_points'] + standard_point_change
-
-    # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
-    # update challenger points
-    cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (challenger_stats['battles'], challenger_stats['wins'], challenger_stats['average_enemy_rank'], challenger_new_points, challenger_stats['current_points'], str(challenger.id),))
-    # update opponent points
-    cursor.execute("UPDATE players SET battles = %s, wins = %s, average_enemy_rank = %s, points = %s, old_points = %s WHERE discord_id = %s", (opponent_stats['battles'], opponent_stats['wins'], opponent_stats['average_enemy_rank'], opponent_new_points, opponent_stats['current_points'], str(opponent.id),))
-    return 
-# update player points ends
 
 
 
@@ -359,8 +125,8 @@ async def registerplayer(ctx, nickname: str):
 
 
 # REGISTER CLAN COMMAND
-@bot.slash_command(name="registerclan", description="Add a new clanname before using clanname to other commands.")
-async def registerclan(ctx, clanname: str):
+@bot.slash_command(name="registernewclan", description="Register a new clan if you cannot find yours in /printclans.")
+async def registernewclan(ctx, clanname: str):
     clanname = clanname.lower()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM clans WHERE name = %s", (clanname,))
@@ -380,19 +146,19 @@ async def registerclan(ctx, clanname: str):
 @bot.slash_command(name="registeradmin", description="Register as admin to be able to report/approve clanwars and announce events!")
 async def registeradmin(ctx, password:str):
     if (password != settings.leaderpassword):
-        await ctx.respond("You have given a wrong password. \nAsk Legion clan if you want to become an admin.")
+        await ctx.respond("You have given a wrong password. \nAsk Legion clan if you want to become an admin.", ephemeral=True)
         return
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
     alreadyin = cursor.fetchone()
     if alreadyin is not None:
-        await ctx.respond("You are already an admin!")
+        await ctx.respond("You are already an admin!", ephemeral=True)
         return
     # check admin belongs to a clan
     cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
     author_clan_id = cursor.fetchone()[0]
     if(author_clan_id == 1):
-        await ctx.respond("You must join a clan before becoming an admin. Admins represent their clans.")
+        await ctx.respond("You must join a clan before becoming an admin. Admins represent their clans.", ephemeral=True)
         return
     # all ok, add the new admin
     cursor.execute("INSERT INTO admins (discord_id) VALUES (%s)", (str(ctx.author.id),))
@@ -402,8 +168,8 @@ async def registeradmin(ctx, password:str):
 
 
 # CHANGEYOURNICKNAME COMMAND
-@bot.slash_command(name="changeyournickname", description="Give yourself a new nickname!")
-async def changeyournickname(ctx, nickname: str):
+@bot.slash_command(name="changemynick", description="Give yourself a new nickname!")
+async def changemynick(ctx, nickname: str):
     # IF USERNAME EXISTS IN DATABASE, CHANGE THEIR NICKNAME
     is_registered_result = await is_registered(str(ctx.author.id))
     if is_registered_result:
@@ -420,8 +186,8 @@ async def changeyournickname(ctx, nickname: str):
 
 
 # CHANGE YOUR CLAN COMMAND
-@bot.slash_command(name="changeyourclan", description="Give yourself a new clanname!")
-async def changeyourclan(ctx, new_clanname: str):
+@bot.slash_command(name="changemyclan", description="Give yourself a new clanname!")
+async def changemyclan(ctx, new_clanname: str):
     new_clanname = new_clanname.lower()
     # check if user has registered
     is_registered_result = await is_registered(str(ctx.author.id))
@@ -457,7 +223,7 @@ async def changeyourclan(ctx, new_clanname: str):
 async def myscore(ctx):
     is_registered_result = await is_registered(str(ctx.author.id))
     if not is_registered_result:
-        await ctx.respond(f"Please register before printing your scores.")
+        await ctx.respond(f"Please register before printing your scores.", ephemeral=True)
         return
     cursor = conn.cursor()
     cursor.execute("SELECT nickname, points, battles, wins, average_enemy_rank, clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -479,36 +245,15 @@ async def myscore(ctx):
 # myscore ends
 
 
-# LEADERBOARD PLAYERS COMMAND
-@bot.slash_command(name="leaderboardplayers", description="Print top players of all players!")
-async def playerleaderboard(ctx, number: int):
-    scores_per_player = []
-    scores_per_player.append("``` ** LEADERBOARD OF PLAYERS **```")
-
-    cursor = conn.cursor()
-    cursor.execute("""SELECT players.nickname, players.points, players.battles, players.wins, players.average_enemy_rank, clans.name 
-                   FROM players 
-                   LEFT JOIN clans ON players.clan_id = clans.id 
-                   ORDER BY points DESC""",())
-
-    top_players = cursor.fetchmany(number)
-    calculator = 0
-    for item in top_players:
-        calculator += 1
-        printable_text = ""
-        if (item[2] > 0):
-            printable_text = f"        RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {round((item[3] / item[2]) * 100, 2)}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
-        else:
-            printable_text = f"        RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
-        scores_per_player.append(f"``` {printable_text.center(24)} ```")
-    scores_per_player.append(f"```  ** TOP{number} PLAYERS HAVE BEEN PRINTED! **```")
-    await ctx.respond("".join(scores_per_player))
-# player leaderboard ends
-
-
 # LEADERBOARD PLAYERS OF CLAN COMMAND
-@bot.slash_command(name="leaderboardplayersofclan", description="Print top players of a specific clan!")
-async def leaderboardplayersofclan(ctx, number: int, clanname: str):
+@bot.slash_command(name="leaderboardplayers", description="Print top players of a specific clan (or all clans)!")
+async def leaderboardplayers(ctx, number: int, clanname: discord.Option(str, "'all' if you want all clans", default='all')):
+    # print all players of all clans
+    if (clanname == 'all' or clanname==''):
+        await leaderboard_allplayers(ctx, number)
+        return
+
+    # print players of a specific clan
     scores_per_player = []
     scores_per_player.append(f"``` ** LEADERBOARD PLAYERS OF {clanname.upper()} **```")
 
@@ -535,11 +280,11 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
         calculator += 1
         printable_text = ""
         if (item[2] > 0):
-            printable_text = f"    RANK: {calculator} of {item[5]}. \n  nickname: {item[0]}, \n  points: {item[1]}, \n  battles: {item[2]}, \n  winrate: {round((item[3] / item[2]) * 100, 2)}%, \n  avrg_enemy_rank: {round(item[4], 0)}"
+            printable_text = f"  RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {round((item[3] / item[2]) * 100, 2)}%, \n avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
         else:
-            printable_text = f"    RANK: {calculator} of {item[5]}. \n  nickname: {item[0]}, \n  points: {item[1]}, \n  battles: {item[2]}, \n  winrate: 0%, \n  avrg_enemy_rank: {round(item[4], 0)}"
+            printable_text = f"  RANK: {calculator}. \n nickname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemy_rank:  {round(item[4], 0)}, \n clanname: {item[5]}"
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
-    scores_per_player.append(f"```** TOP{number} PLAYERS OF {clanname} HAVE BEEN PRINTED! **```")
+    scores_per_player.append(f"``` ** TOP{number} PLAYERS OF {clanname} HAVE BEEN PRINTED! **```")
     await ctx.respond("".join(scores_per_player))
 # leaderboard players of clan ends
 
@@ -549,7 +294,7 @@ async def leaderboardplayersofclan(ctx, number: int, clanname: str):
 @bot.slash_command(name="leaderboardclans", description="Print top clans in order!")
 async def leaderboardclans(ctx, number: int):
     scores_per_clan = []
-    scores_per_clan.append(f"``` ** LEADERBOARD OF CLANS **```")
+    scores_per_clan.append(f"``` ** LEADERBOARD CLANS **```")
 
     number = int(number)
     cursor = conn.cursor()
@@ -563,9 +308,9 @@ async def leaderboardclans(ctx, number: int):
         calculator += 1
         printable_text = ""
         if (item[2] > 0):
-            printable_text = f"       RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {round((item[3] / item[2]) * 100, 2)}%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
+            printable_text = f"    RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: {round((item[3] / item[2]) * 100, 2)}%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
         else:
-            printable_text = f"       RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
+            printable_text = f"    RANK: {calculator}. \n clanname: {item[0]}, \n points: {item[1]}, \n battles: {item[2]}, \n winrate: 0%, \n avrg_enemyclan_rank: {round(item[4], 0)}"
         scores_per_clan.append(f"``` {printable_text.center(24)} ```")
     scores_per_clan.append(f"```  ** TOP{number} CLANS HAVE BEEN PRINTED! **```")
     await ctx.respond("".join(scores_per_clan))
@@ -894,56 +639,20 @@ async def printclanwars(ctx, clanname: str, number: int):
 
 
 # PRINTCLANNAMES COMMAND
-@bot.slash_command(name="printclannames", description="Print all existing clannames")
-async def printclannames(ctx):
+@bot.slash_command(name="printclans", description="Print all existing clannames")
+async def printclans(ctx):
     existing_clans = await fetchExistingClannames()
     await ctx.respond(f"Currently existing clans are next: \n{existing_clans} \n If you miss a clan, please use '/registerclan'!")
 # print clannames ends
 
 
-# PRINTMYDUELSAGAINST COMMAND
-@bot.slash_command(name="printmyduelsagainst", description="Print your latest duels against a specific opponent")
-async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
-    duel_history = []
-    duel_history.append(f"```** {number} FT7s OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
-    # make sure challenger is registered before trying to find him from the database
-    author_is_registered = await is_registered(str(ctx.author.id))
-    if not author_is_registered:
-        await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
-        return
-    # make sure opponent is registered before trying to find him from the database
-    opponent_is_registered = await is_registered(str(opponent.id))
-    if not opponent_is_registered:
-        await ctx.respond(f"{opponent.display_name} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
-        return
-
-    # fetch all duels of person and show the duels with correct nicknames
-    # note that author can be either challenger or opponent in the database
-    cursor = conn.cursor()
-    cursor.execute("""SELECT duels.date, challenger_player.nickname, opponent_player.nickname, duels.challenger_score, duels.opponent_score
-                   FROM duels
-                   LEFT JOIN players AS challenger_player ON duels.challenger_discord_id = challenger_player.discord_id
-                   LEFT JOIN players AS opponent_player ON duels.opponent_discord_id = opponent_player.discord_id
-                   WHERE (challenger_player.discord_id = %s OR challenger_player.discord_id = %s) 
-                   AND (opponent_player.discord_id = %s OR opponent_player.discord_id = %s)
-                   ORDER BY duels.date DESC""", (str(ctx.author.id), str(opponent.id), str(ctx.author.id), str(opponent.id),))
-    duels = cursor.fetchmany(number)
-    if len(duels) >= 1:
-        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_score, 4 = opponent_score
-            message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
-            duel_history.append(message)
-        duel_history.append(f"```{number} MOST RECENT FT7s OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} HAVE BEEN PRINTED!```")
-        await ctx.respond("".join(duel_history))
-        return
-    else:
-        await ctx.respond(f"{ctx.author.mention} does not have duels against {opponent.display_name}")
-        return
-# print my duels against ends
-
 
 # PRINTMYDUELS
-@bot.slash_command(name="printmyduels", description="Print your latest duels against anyone")
-async def printmyduels(ctx, number: int):
+@bot.slash_command(name="printmyduels", description="Print your latest duels against a specific opponent or every opponent")
+async def printmyduels(ctx, number: int, opponent: discord.Option(discord.Member, "select opponent if u want to print duels against a specific opponent", default=None)):
+    if (opponent!=None):
+        await printmyduelssagainst(ctx, opponent, number)
+        return
     duel_history = []
     duel_history.append(f"```** {number} FT7's OF {ctx.author.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
@@ -962,16 +671,17 @@ async def printmyduels(ctx, number: int):
                    ORDER BY duels.date DESC""", (str(ctx.author.id), str(ctx.author.id),))
     duels = cursor.fetchmany(number)
 
-    if len(duels) >= 1:
-        for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_score, 4 = opponent_score
-            message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
-            duel_history.append(message)
-        duel_history.append(f"```{number} MOST RECENT FT7's OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
-        await ctx.respond("".join(duel_history))
-        return
-    else:
+    if len(duels) < 1:
         await ctx.respond(f"{ctx.author.mention} does not have any duels!")
         return
+    
+    for duel in duels: # 0 = date, 1 = challenger_nick, 2 = opponent_nick, 3 = challenger_score, 4 = opponent_score
+        message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
+        duel_history.append(message)
+    duel_history.append(f"```{number} MOST RECENT FT7's OF {ctx.author.display_name.upper()} HAVE BEEN PRINTED!```")
+    await ctx.respond("".join(duel_history))
+    return
+        
 # print my duels ends
 
 
@@ -994,9 +704,9 @@ async def printadmins(ctx):
                            WHERE discord_id = %s""", (id,))
             admin_info = cursor.fetchone()
             all_admins.append(f"```NUMBER {calculator}: \nnickname: {admin_info[0]} \ndiscord_username: {admin_info[1]} \nclanname: {admin_info[2]}```")
-        await ctx.respond("".join(all_admins))
+        await ctx.respond("".join(all_admins), ephemeral=True)
     else:
-        await ctx.respond(f"There are no currently registered admins!")
+        await ctx.respond(f"There are no currently registered admins!", ephemeral=True)
 # print admins ends
 
 
