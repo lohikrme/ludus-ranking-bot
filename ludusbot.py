@@ -158,7 +158,7 @@ async def registeradmin(ctx, password:str):
     cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
     author_clan_id = cursor.fetchone()[0]
     if(author_clan_id == 1):
-        await ctx.respond("You must join a clan before becoming an admin. Admins represent their clans.", ephemeral=True)
+        await ctx.respond("You must join a clan before becoming an admin. Admins represent their clans. Please use '/changemyclan'.", ephemeral=True)
         return
     # all ok, add the new admin
     cursor.execute("INSERT INTO admins (discord_id) VALUES (%s)", (str(ctx.author.id),))
@@ -652,10 +652,10 @@ async def printclans(ctx):
 
 
 # PRINTMYDUELS
-@bot.slash_command(name="printmyduels", description="Print your latest duels against a specific opponent or every opponent")
+@bot.slash_command(name="printmyft7", description="Print your latest duels against a specific opponent or every opponent")
 @discord.option("number", int, description="number of ft7 to print")
 @discord.option("opponent", discord.Member, description="'Please leave the opponent empty if you want to print against all players", default=None)
-async def printmyduels(ctx, number: int, opponent: discord.Member):
+async def printmyft7(ctx, number: int, opponent: discord.Member):
     if (opponent!=None):
         await printmyduelssagainst(ctx, opponent, number)
         return
