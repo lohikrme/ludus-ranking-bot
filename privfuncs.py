@@ -1,5 +1,5 @@
 
-# updated 21th septemper 2024
+# updated 2nd october 2024
 
 import datetime
 from services import conn
@@ -9,7 +9,7 @@ import discord
 # -------- PRIVATE FUNCTIONS -----------
 
 # USE THIS TO UPDATE DUELS DATATABLE HISTORY
-async def update_duels_history(challenger_discord_id: str, opponent_discord_id: str, challenger_score: int, opponent_score: int):
+async def _update_duels_history(challenger_discord_id: str, opponent_discord_id: str, challenger_score: int, opponent_score: int):
     date = datetime.datetime.now()
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     cursor = conn.cursor()
@@ -18,7 +18,7 @@ async def update_duels_history(challenger_discord_id: str, opponent_discord_id: 
   
 
 # USE THIS TO CHECK IF USER REGISTERED
-async def is_registered(discord_id: str):
+async def _is_registered(discord_id: str):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM players WHERE discord_id = %s", (discord_id,))
     existing_user = cursor.fetchone()
@@ -31,7 +31,7 @@ async def is_registered(discord_id: str):
 
 
 # USE TO INFO USER OF EXISTING CLANNAMES
-async def fetchExistingClannames():
+async def _fetchExistingClannames():
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM clans", ())
     clannames = cursor.fetchall()
@@ -43,7 +43,7 @@ async def fetchExistingClannames():
 
 
 # print all players
-async def leaderboard_allplayers(ctx, number: int):
+async def _leaderboard_allplayers(ctx, number: int):
     scores_per_player = []
     scores_per_player.append("``` ** LEADERBOARD PLAYERS **```")
 
@@ -69,7 +69,7 @@ async def leaderboard_allplayers(ctx, number: int):
 
 
 # PRINTMYDUELSAGAINST 
-async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
+async def _printmyduelssagainst(ctx, opponent: discord.Member, number: int):
     duel_history = []
     duel_history.append(f"```** {number} FT7s OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
@@ -109,7 +109,7 @@ async def printmyduelssagainst(ctx, opponent: discord.Member, number: int):
 
 
 # UPDATE CLAN POINTS IN DATABASE
-async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, challenger_win: bool):
+async def _update_clan_points(challenger_clan_id: int, defender_clan_id: int, challenger_win: bool):
     # these can be updated as need
     standard_point_change = 20
     point_level_divident = 60
@@ -204,7 +204,7 @@ async def update_clan_points(challenger_clan_id: int, defender_clan_id: int, cha
 
 
 # UPDATE PLAYER POINTS IN DATABASE
-async def update_player_points(challenger, opponent, challenger_win: bool):
+async def _update_player_points(challenger, opponent, challenger_win: bool):
 
     # these can be updated as need
     standard_point_change = 20

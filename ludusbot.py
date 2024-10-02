@@ -1,5 +1,5 @@
 # ludusbot.py
-# updated 21th septemper 2024
+# updated 2nd october 2024
 
 import settings
 import random
@@ -10,7 +10,7 @@ from discord.ext import commands
 import asyncio
 import datetime
 from services import conn
-from privfuncs import update_duels_history, is_registered, fetchExistingClannames, leaderboard_allplayers, printmyduelssagainst, update_clan_points, update_player_points
+from privfuncs import _update_duels_history, _is_registered, _fetchExistingClannames, _leaderboard_allplayers, _printmyduelssagainst, _update_clan_points, _update_player_points
 
 
 
@@ -107,7 +107,7 @@ async def registerplayer(ctx, nickname: str):
     # FETCH USER'S OFFICIAL DISCORD NAME
     username = str(ctx.author.name)
     # NOTIFY USER THEY ARE ALREADY REGISTERED
-    is_registered_result = await is_registered(str(ctx.author.id))
+    is_registered_result = await _is_registered(str(ctx.author.id))
     if is_registered_result:
         await ctx.respond("You have already been registered! \nIf you want to reset your rank, please contact admins.", ephemeral=True)
     # ADD A NEW USER
@@ -171,7 +171,7 @@ async def registeradmin(ctx, password:str):
 @bot.slash_command(name="changemynick", description="Give yourself a new nickname!")
 async def changemynick(ctx, nickname: str):
     # IF USERNAME EXISTS IN DATABASE, CHANGE THEIR NICKNAME
-    is_registered_result = await is_registered(str(ctx.author.id))
+    is_registered_result = await _is_registered(str(ctx.author.id))
     if is_registered_result:
         cursor = conn.cursor()
         cursor.execute("SELECT nickname FROM players WHERE discord_id = %s", (str(ctx.author.id),))
@@ -190,12 +190,12 @@ async def changemynick(ctx, nickname: str):
 async def changemyclan(ctx, new_clanname: str):
     new_clanname = new_clanname.lower()
     # check if user has registered
-    is_registered_result = await is_registered(str(ctx.author.id))
+    is_registered_result = await _is_registered(str(ctx.author.id))
     if not is_registered_result:
         await ctx.respond(f"Register before using this command or contact admins.", ephemeral=True)
         return
     # check that selected new clanname is registered as clan
-    existing_clans = await fetchExistingClannames()
+    existing_clans = await _fetchExistingClannames()
     if new_clanname not in existing_clans:
         await ctx.respond(f"'{new_clanname}' is not part of existing clans: \n{existing_clans} \nPlease use '/registerclan' to create a new clanname.", ephemeral=True)
         return
@@ -221,7 +221,7 @@ async def changemyclan(ctx, new_clanname: str):
 # MYSCORE COMMAND
 @bot.slash_command(name="myscore", description="Print your personal scores!")
 async def myscore(ctx):
-    is_registered_result = await is_registered(str(ctx.author.id))
+    is_registered_result = await _is_registered(str(ctx.author.id))
     if not is_registered_result:
         await ctx.respond(f"Please register before printing your scores.", ephemeral=True)
         return
@@ -252,7 +252,7 @@ async def myscore(ctx):
 async def leaderboardplayers(ctx, number: int, clanname: str):
     # print all players of all clans
     if (clanname == None):
-        await leaderboard_allplayers(ctx, number)
+        await _leaderboard_allplayers(ctx, number)
         return
 
     # print players of a specific clan
@@ -260,7 +260,7 @@ async def leaderboardplayers(ctx, number: int, clanname: str):
     scores_per_player.append(f"``` ** LEADERBOARD PLAYERS OF {clanname.upper()} **```")
 
     clanname = clanname.lower()
-    current_clans = await fetchExistingClannames()
+    current_clans = await _fetchExistingClannames()
     if clanname not in current_clans:
         await ctx.respond(f"```{clanname} is not part of existing clans: \n{current_clans} \nPlease use '/registerclan' to create a new clan.```", ephemeral=True)
         return
@@ -359,7 +359,7 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
         return
 
     ### step3: validate challenger and defender clannames and scores
-    existing_clans = await fetchExistingClannames()
+    existing_clans = await _fetchExistingClannames()
     if reporter_clanname not in existing_clans:
         await ctx.respond(f"```The reporter_clanname {reporter_clanname} wasn't part of: \n{existing_clans}. \nIf your clan's name is missing, please use '/registerclan'```", ephemeral=True)
         return
@@ -446,10 +446,10 @@ async def reportclanwar(ctx, year: int, month: int, day: int, reporter_clanname:
             challenger_won = False
             if (reporter_score > opponent_score):
                 challenger_won = True
-                await update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
+                await _update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
             else:
                 challenger_won = False
-                await update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
+                await _update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
 
             ### step9: notify author's channel and opponent admins of new clanwar scores and rankings
             cursor.execute("SELECT points, old_points FROM clans WHERE id = %s", (challenger_clan_id,))
@@ -504,12 +504,12 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
         return
     
     # step 1: check challenger and opponent are registered
-    challenger_is_registered = await is_registered(str(ctx.author.id))
+    challenger_is_registered = await _is_registered(str(ctx.author.id))
     if not challenger_is_registered:
         await ctx.respond("You have not been registered. Please use '/registerplayer' before reportduel.", ephemeral=True)
         return
     
-    opponent_is_registered = await is_registered(str(opponent.id))
+    opponent_is_registered = await _is_registered(str(opponent.id))
     if not opponent_is_registered:
         await ctx.respond(f"Your opponent {opponent.display_name} has not been registered. Please use '/registerplayer'.", ephemeral=True)
         return
@@ -553,11 +553,11 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
 
         # step 6: store scores and ranks into database
         if challenger_won:
-            await update_player_points(ctx.author, opponent, True)
-            await update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
+            await _update_player_points(ctx.author, opponent, True)
+            await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
         else:
-            await update_player_points(ctx.author, opponent, False)
-            await update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
+            await _update_player_points(ctx.author, opponent, False)
+            await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
 
         # step 7: notify users of their new points and pointchange
         if challenger_won:
@@ -607,7 +607,7 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
 @discord.option("number", int, description="number of clanwars to print")
 async def printclanwars(ctx, clanname: str, number: int):
     clanname = clanname.lower()
-    existing_clans = await fetchExistingClannames()
+    existing_clans = await _fetchExistingClannames()
     if clanname not in existing_clans:
         await ctx.respond(f"```{clanname} is not part of existing clans: \n{existing_clans} \nYou may use '/registerclan' to create a new clan.```", ephemeral=True)
         return
@@ -645,7 +645,7 @@ async def printclanwars(ctx, clanname: str, number: int):
 # PRINTCLANNAMES COMMAND
 @bot.slash_command(name="printclans", description="Print all existing clannames")
 async def printclans(ctx):
-    existing_clans = await fetchExistingClannames()
+    existing_clans = await _fetchExistingClannames()
     await ctx.respond(f"Currently existing clans are next: \n{existing_clans} \n If you miss a clan, please use '/registerclan'!")
 # print clannames ends
 
@@ -657,12 +657,12 @@ async def printclans(ctx):
 @discord.option("opponent", discord.Member, description="'Please leave the opponent empty if you want to print against all players", default=None)
 async def printmyft7(ctx, number: int, opponent: discord.Member):
     if (opponent!=None):
-        await printmyduelssagainst(ctx, opponent, number)
+        await _printmyduelssagainst(ctx, opponent, number)
         return
     duel_history = []
     duel_history.append(f"```** {number} FT7's OF {ctx.author.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
-    author_is_registered = await is_registered(str(ctx.author.id))
+    author_is_registered = await _is_registered(str(ctx.author.id))
     if not author_is_registered:
         await ctx.respond(f"{ctx.author.mention} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
         return
