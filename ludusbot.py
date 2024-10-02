@@ -6,17 +6,13 @@ import random
 import discord
 import facts
 import guides
-from discord.ext import commands
-import asyncio
-import datetime
 from bot_instance import bot
 from services import conn
-from private_functions import _fetch_existing_clannames, _is_registered, _leaderboard_allplayers, _print_myft7s_against, _update_clan_points, _update_duels_history, _update_player_points
+from private_functions import _fetch_existing_clannames
 from register_and_change_commands import cmd_registerplayer, cmd_registernewclan, cmd_registeradmin, cmd_changemynick, cmd_changemyclan
 from leaderboard_commands import cmd_myscore, cmd_leaderboardplayers, cmd_leaderboardclans
 from report_commands import cmd_reportclanwar, cmd_reportft7
 from print_commands import cmd_printclanwars, cmd_printmyft7, cmd_printadmins
-
 
 
 # keep these guilds real time, but store permanently in database
