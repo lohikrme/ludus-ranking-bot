@@ -73,12 +73,12 @@ async def _printmyduelssagainst(ctx, opponent: discord.Member, number: int):
     duel_history = []
     duel_history.append(f"```** {number} FT7s OF {ctx.author.display_name.upper()} vs {opponent.display_name.upper()} **```")
     # make sure challenger is registered before trying to find him from the database
-    author_is_registered = await is_registered(str(ctx.author.id))
+    author_is_registered = await _is_registered(str(ctx.author.id))
     if not author_is_registered:
         await ctx.respond(f"You have not been registered yet! Please use '/registerplayer'.", ephemeral=True)
         return
     # make sure opponent is registered before trying to find him from the database
-    opponent_is_registered = await is_registered(str(opponent.id))
+    opponent_is_registered = await _is_registered(str(opponent.id))
     if not opponent_is_registered:
         await ctx.respond(f"{opponent.display_name} has not yet been registered. Please use '/registerplayer'.", ephemeral=True)
         return
