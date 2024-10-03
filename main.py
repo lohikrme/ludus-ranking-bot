@@ -1,5 +1,5 @@
-# ludusbot.py
-# updated 2nd october 2024
+# main.py
+# updated 3rd october 2024
 
 import settings
 import random
