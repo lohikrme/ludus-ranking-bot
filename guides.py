@@ -1,4 +1,3 @@
-
 # updated 21th septemper 2024
 
 guide_eng = """```'Ludus ranking bot' has 3 basic functionalities:
@@ -17,8 +16,6 @@ If 'leaderboardplayers' is given a clanname, it will print scores of players of 
 If 'printmyduels' is given an opponent name, it will print duels against this specific opponent.```"""
 
 
-
-
 guide_rus = """```'Ludus ranking bot' имеет 3 основные функции:
 
 1. Кланы получают очки рейтинга и сохраняют свои результаты клановых войн, используя команду '/reportclanwar'.
@@ -33,9 +30,6 @@ guide_rus = """```'Ludus ranking bot' имеет 3 основные функци
 Эти очки можно распечатать с помощью '/leaderboardplayers' или '/printmyduels'.
 Если 'leaderboardplayers' указано имя клана, будут напечатаны очки игроков клана.
 Если 'printmyduels' указано имя соперника, будут напечатаны дуэли против этого конкретного соперника.```"""
-
-
-
 
 
 guide_tr = """```'Ludus ranking bot' 3 temel işlevi vardır:

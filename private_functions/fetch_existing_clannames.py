@@ -3,6 +3,7 @@
 
 from services import conn
 
+
 # FETCH EXISTING CLANNAMES
 async def _fetch_existing_clannames():
     cursor = conn.cursor()
@@ -12,4 +13,6 @@ async def _fetch_existing_clannames():
     for item in clannames:
         current_clans.append(item[0])
     return current_clans
+
+
 # fetch existing clannames ends

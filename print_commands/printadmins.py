@@ -3,6 +3,7 @@
 
 from services import conn
 
+
 async def cmd_printadmins(ctx):
     all_admins = []
     all_admins.append("```All currently registered admins:```")
@@ -14,13 +15,25 @@ async def cmd_printadmins(ctx):
     if len(admin_ids) > 0:
         for id in admin_ids:
             calculator += 1
-            cursor.execute("""SELECT players.nickname, players.username, clans.name 
-                           FROM players 
-                           LEFT JOIN clans ON players.clan_id = clans.id
-                           WHERE discord_id = %s""", (id,))
+            cursor.execute(
+                """
+                SELECT players.nickname, players.username, clans.name 
+                FROM players 
+                LEFT JOIN clans ON players.clan_id = clans.id
+                WHERE discord_id = %s
+                """,
+                (id,),
+            )
             admin_info = cursor.fetchone()
-            all_admins.append(f"```NUMBER {calculator}: \nnickname: {admin_info[0]} \ndiscord_username: {admin_info[1]} \nclanname: {admin_info[2]}```")
+            all_admins.append(
+                f"```NUMBER {calculator}: \n"
+                f"nickname: {admin_info[0]} \n"
+                f"discord_username: {admin_info[1]} \n"
+                f"clanname: {admin_info[2]}```"
+            )
         await ctx.respond("".join(all_admins), ephemeral=True)
     else:
         await ctx.respond(f"There are no currently registered admins!", ephemeral=True)
+
+
 # print admins ends
