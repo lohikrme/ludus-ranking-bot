@@ -1,5 +1,5 @@
 # reportft7.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 import discord
 import asyncio
@@ -16,7 +16,9 @@ from services import conn
 ft7_status = []
 
 
+# CMD_REPORTFT7 STARTS
 async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score: int):
+    cursor = conn.cursor()
     global ft7_status
 
     # step 0: check opponent is different than challenger
@@ -101,19 +103,14 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
         # step 6: store scores and ranks into database
         if challenger_won:
             await _update_player_points(ctx.author, opponent, True)
-            await _update_duels_history(
-                str(ctx.author.id), str(opponent.id), my_score, opponent_score
-            )
+            await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
         else:
             await _update_player_points(ctx.author, opponent, False)
-            await _update_duels_history(
-                str(ctx.author.id), str(opponent.id), my_score, opponent_score
-            )
+            await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
 
         # step 7: notify users of their new points and pointchange
         if challenger_won:
             ft7_status.remove(ctx.author.id)
-            cursor = conn.cursor()
             cursor.execute(
                 "SELECT points, old_points FROM players WHERE discord_id = %s",
                 (str(ctx.author.id),),
@@ -169,6 +166,8 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
             )
             await ctx.author.send(embed=defender_win_embed)
             await opponent.send(embed=defender_win_embed)
+
+            # databases updated and players notified of new stats successfully
             return
 
     # step 8: if scores are disagreed, notify challenger that opponent disagrees

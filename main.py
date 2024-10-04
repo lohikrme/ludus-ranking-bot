@@ -1,5 +1,5 @@
 # main.py
-# updated 3rd october 2024
+# updated 4th october 2024
 
 import settings
 import random
@@ -44,11 +44,7 @@ async def fetch_all_guild_ids():
 async def on_guild_join(guild):
     cursor = conn.cursor()
     cursor.execute(
-        """
-        INSERT INTO guilds (id, name) 
-        VALUES (%s, %s) 
-        ON CONFLICT (id) DO NOTHING
-        """,
+        "INSERT INTO guilds (id, name) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING",
         (
             str(guild.id),
             str(guild.name),
@@ -82,12 +78,9 @@ async def on_connect():
 
 
 # GUIDE IN ENGLISH
-@bot.slash_command(name="guide", description="Teaches commands of ludus-ranking-bot with English!")
+@bot.slash_command(name="guide", description="Teaches commands of ludus-ranking-bot in English!")
 async def guide(ctx):
     await ctx.respond(guides.guide_eng, ephemeral=True)
-
-
-# guide in english ends
 
 
 # GUIDE IN RUSSIAN
@@ -96,18 +89,10 @@ async def гид(ctx):
     await ctx.respond(guides.guide_rus, ephemeral=True)
 
 
-# guide in russian ends
-
-
 # GUIDE IN TURKISH
-@bot.slash_command(
-    name="rehber", description="ludus-ranking-bot komutlarını İngilizce ile öğretir!"
-)
+@bot.slash_command(name="rehber", description="ludus-ranking-bot komutlarını İngilizce ile öğretir!")
 async def rehber(ctx):
     await ctx.respond(guides.guide_tr, ephemeral=True)
-
-
-# guide in turkish ends
 
 
 # FACTUAL ENG COMMAND
@@ -117,9 +102,6 @@ async def factual(ctx):
     await ctx.respond(answer)
 
 
-# factual eng ends
-
-
 # FACTUAL RUS COMMAND
 @bot.slash_command(name="факт", description="Бот расскажет интересные факты!")
 async def факт(ctx):
@@ -127,17 +109,11 @@ async def факт(ctx):
     await ctx.respond(answer)
 
 
-# factual rus ends
-
-
 # FACTUAL TR COMMAND
 @bot.slash_command(name="gerçekler", description="Bot ilginç gerçekleri anlatacak")
 async def gerçekler(ctx):
     answer = random.choice(facts.facts_tr)
     await ctx.respond(answer)
-
-
-# factual tr ends
 
 
 # -------------------------------------------------------
@@ -150,31 +126,16 @@ async def registerplayer(ctx, nickname: str):
     await cmd_registerplayer(ctx, nickname)
 
 
-# register player ends
-
-
 # REGISTER CLAN COMMAND
-@bot.slash_command(
-    name="registernewclan",
-    description="Register a new clan if you cannot find yours in /printclans.",
-)
+@bot.slash_command(name="registernewclan", description="Register a new clan.")
 async def registernewclan(ctx, clanname: str):
     await cmd_registernewclan(ctx, clanname)
 
 
-# registerclan ends
-
-
 # REGISTER ADMIN COMMAND
-@bot.slash_command(
-    name="registeradmin",
-    description="Register as admin to be able to report clanwars and announce events!",
-)
+@bot.slash_command(name="registeradmin", description="Register to be a clan admin!")
 async def registeradmin(ctx, password: str):
     await cmd_registeradmin(ctx, password)
-
-
-# register admin ends
 
 
 # CHANGEYOURNICKNAME COMMAND
@@ -183,16 +144,10 @@ async def changemynick(ctx, nickname: str):
     await cmd_changemynick(ctx, nickname)
 
 
-# change your nickname ends
-
-
 # CHANGE YOUR CLAN COMMAND
 @bot.slash_command(name="changemyclan", description="Give yourself a new clanname!")
 async def changemyclan(ctx, new_clanname: str):
     await cmd_changemyclan(ctx, new_clanname)
-
-
-# change your clan ends
 
 
 # -------------------------------------------------------
@@ -205,37 +160,20 @@ async def myscore(ctx):
     await cmd_myscore(ctx)
 
 
-# myscore ends
-
-
 # LEADERBOARD PLAYERS
-@bot.slash_command(
-    name="leaderboardplayers",
-    description="Print top players of a specific clan (or all clans)!",
-)
-@discord.option("number", int, description="number of players to print")
-@discord.option(
-    "clanname",
-    str,
-    description="'Please leave the clanname empty if you want to print players of all clans!",
-    default=None,
-)
+@bot.slash_command(name="leaderboardplayers", description="Print top players!")
+@discord.option("number", int, description="Number of players.")
+@discord.option("clanname", str, description="(Optional). A specific clan.", default=None)
 async def leaderboardplayers(ctx, number: int, clanname: str):
     await cmd_leaderboardplayers(ctx, number, clanname)
 
 
-# leaderboard players ends
-
-
 # LEADERBOARD CLANS COMMAND
 # for example, user gives '/clanleaderboard 10' and bot gives scores of top10 clans
-@bot.slash_command(name="leaderboardclans", description="Print top clans in order!")
-@discord.option("number", int, description="number of clans to print")
+@bot.slash_command(name="leaderboardclans", description="Print top clans!")
+@discord.option("number", int, description="Number of clans.")
 async def leaderboardclans(ctx, number: int):
     await cmd_leaderboardclans(ctx, number)
-
-
-# leaderboard clans ends
 
 
 # -------------------------------------------------------
@@ -243,10 +181,11 @@ async def leaderboardclans(ctx, number: int):
 
 
 # REPORT CLANWAR COMMAND
-@bot.slash_command(
-    name="reportclanwar",
-    description="Save clanwar scores permanently and gain rank for your clan!",
-)
+@bot.slash_command(name="reportclanwar", description="Save clanwar scores permanently!")
+@discord.option("reporter_clanname", str, description="Your own clan's name.")
+@discord.option("reporter_clanscore", int, description="Your own clan's score.")
+@discord.option("opponent_clanname", str, description="Your enemy's clan's name.")
+@discord.option("opponent_clanscore", int, description="Your enemy's clan's score.")
 async def reportclanwar(
     ctx,
     year: int,
@@ -269,19 +208,11 @@ async def reportclanwar(
     )
 
 
-# reportclanwar ends
-
-
 # REPORTFT7 COMMAND
-@bot.slash_command(
-    name="reportft7",
-    description="Report ft7 duel scores via private chat and gain personal ranking points!",
-)
+@bot.slash_command(name="reportft7", description="Report ft7 duel scores via private chat!")
+@discord.option("opponent", discord.Member, description="Select opponent from the list.")
 async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score: int):
     await cmd_reportft7(ctx, opponent, my_score, opponent_score)
-
-
-# report ft7 ends
 
 
 # -------------------------------------------------------
@@ -289,46 +220,29 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
 
 
 # PRINTCLANWARS COMMAND
-@bot.slash_command(name="printclanwars", description="Print clanwar scores of a selected clanname")
-@discord.option("number", int, description="number of clanwars to print")
+@bot.slash_command(name="printclanwars", description="Print clanwar history of a clan.")
+@discord.option("number", int, description="Number of clanwars.")
 async def printclanwars(ctx, clanname: str, number: int):
     await cmd_printclanwars(ctx, clanname, number)
 
 
-# print clan wars ends
-
-
-# PRINTCLANS COMMAND
-@bot.slash_command(name="printclans", description="Print all existing clannames")
-async def printclans(ctx):
+# PRINTCLANNAMES COMMAND
+@bot.slash_command(name="printclannames", description="Print all existing clannames")
+async def printclannames(ctx):
     existing_clans = await _fetch_existing_clannames()
     await ctx.respond(
         f"Currently existing clans are next: \n"
         f"{existing_clans} \n"
-        f" If you miss a clan, please use '/registerclan'!"
+        f" If you miss a clan, please use \n'/registerclan'!"
     )
 
 
-# printclans ends
-
-
 # PRINTMYDUELS
-@bot.slash_command(
-    name="printmyft7",
-    description="Print your latest duels against a specific opponent or every opponent",
-)
-@discord.option("number", int, description="number of ft7 to print")
-@discord.option(
-    "opponent",
-    discord.Member,
-    description="(Optional). Choose a player or keep empty.",
-    default=None,
-)
+@bot.slash_command(name="printmyft7", description="Print your latest ft7s.")
+@discord.option("number", int, description="Number of ft7s to print.")
+@discord.option("opponent", discord.Member, description="(Optional). Specific enemy.", default=None)
 async def printmyft7(ctx, number: int, opponent: discord.Member):
     await cmd_printmyft7(ctx, number, opponent)
-
-
-# print my duels ends
 
 
 # PRINTADMINS COMMAND
@@ -337,44 +251,23 @@ async def printadmins(ctx):
     await cmd_printadmins(ctx)
 
 
-# print admins ends
-
-
 # -------------------------------------------------------
 # ---------------- OTHER COMMANDS -----------------------
 
 
 # EVENTANNOUNCE COMMAND
-@bot.slash_command(
-    name="eventannounce",
-    description="Messages clan members about an approaching event!",
-)
-@discord.option("role", discord.Role, description="@everyone or a specific role to receive?")
+@bot.slash_command(name="eventannounce", description="Message clan members of an event!")
+@discord.option("role", discord.Role, description="@everyone or a specific role?")
 @discord.option("title", str, description="A short description of the event!")
-@discord.option("date", str, description="When will the event be?")
-@discord.option(
-    "where",
-    str,
-    description="(Optional). Where (server?) the event takes place?",
-    default="-",
-)
-@discord.option(
-    "server_password",
-    str,
-    description="(Optional). Does the event have an password?",
-    default="-",
-)
-async def eventannounce(
-    ctx, role: discord.Role, title: str, date: str, where: str, server_password: str
-):
+@discord.option("date", str, description="When will the event start?")
+@discord.option("where", str, description="(Optional). Where event take place?", default="-")
+@discord.option("password", str, description="(Optional). Event password?", default="-")
+async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: str, password: str):
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
     existing_leader = cursor.fetchone()
     if existing_leader is None:
-        await ctx.respond(
-            "```Only admins registered with '/registeradmin' can announce events!```",
-            ephemeral=True,
-        )
+        await ctx.respond("```Only registered admins can announce events!```", ephemeral=True)
         return
     await ctx.respond(f".")
 
@@ -382,7 +275,7 @@ async def eventannounce(
     channel_message = (
         f"on {date.lower()}! \n"
         f"at {where.lower()} \n"
-        f" password: {server_password}  \n \n"
+        f" password: {password}  \n \n"
         f"{role.mention} click ⚔️ to join"
     )
     private_message = (
@@ -397,7 +290,7 @@ async def eventannounce(
     interactive_channel_message = await ctx.send(embed=channel_message_embed)
     await interactive_channel_message.add_reaction("⚔️")
 
-    # direct message all players with normal string and encourage to add a sword emoticon
+    # sends a direct message to players which encourages to click the channel's sword emoticon
     for member in ctx.guild.members:
         if member is None:
             continue
@@ -409,13 +302,8 @@ async def eventannounce(
                 print(f"Cannot send message to {member.name}")
             except discord.HTTPException as e:
                 print(f"Failed to send message to {member.name}: {e}")
-    print(
-        f"All members of {ctx.guild.name} have been messaged" f" about the coming event of {title}!"
-    )
+    print(f"All members of {ctx.guild.name} have been messaged" f" about the coming event of {title}!")
     return
-
-
-# event announce ends
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS

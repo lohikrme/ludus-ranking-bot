@@ -1,24 +1,27 @@
 # update_player_points.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 from services import conn
 
 
 # UPDATE PLAYER POINTS IN DATABASE
 async def _update_player_points(challenger, opponent, challenger_win: bool):
+    ### initiate new points and db connection
+    challenger_new_points = challenger_stats["current_points"]
+    opponent_new_points = opponent_stats["current_points"]
+    cursor = conn.cursor()
 
-    # these can be updated as need
+    ### standard_point_change is the change of ranking points if opponents have equal rank
+    # point_level_divident determines, how much rank difference affects to point_change
     standard_point_change = 20
     point_level_divident = 60
     minimum_point_change = 2
 
-    # fetch current points from database
-    cursor = conn.cursor()
+    ### FETCH CURRENT STATS FROM DATABASE
+
+    # challenger stats
     cursor.execute(
-        """
-        SELECT battles, wins, average_enemy_rank, points 
-        FROM players WHERE discord_id = %s
-        """,
+        "SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s",
         (str(challenger.id),),
     )
     result = cursor.fetchone()
@@ -28,11 +31,10 @@ async def _update_player_points(challenger, opponent, challenger_win: bool):
         "average_enemy_rank": result[2],
         "current_points": result[3],
     }
+
+    # opponent stats
     cursor.execute(
-        """
-        SELECT battles, wins, average_enemy_rank, points 
-        FROM players WHERE discord_id = %s
-        """,
+        "SELECT battles, wins, average_enemy_rank, points FROM players WHERE discord_id = %s",
         (str(opponent.id),),
     )
     result = cursor.fetchone()
@@ -43,94 +45,113 @@ async def _update_player_points(challenger, opponent, challenger_win: bool):
         "current_points": result[3],
     }
 
-    # CALCULATE TOTAL POINT CHANGE, AND THEN, HOW MANY POINT_lEVEL DIFFERENCES THERE ARE
-    point_difference = abs(challenger_stats["current_points"] - opponent_stats["current_points"])
-
-    point_levels = point_difference // point_level_divident
-
-    # INITIATE NEW POINTS, AND THEN CALCULATE THE NEW POINTS BASED ON THE FORMULA
-    challenger_new_points = challenger_stats["current_points"]
-    opponent_new_points = opponent_stats["current_points"]
-
-    # IF CHALLENGER WINS
+    ### -------------------------------
+    ### -----IF CHALLENGER WINS--------
     if challenger_win:
-        # update both players battles, wins, average_enemy_rank
+
+        ### update average_enemy_rank, battles and wins for both participants
+
+        # challenger's average_enemy_rank
         challenger_stats["average_enemy_rank"] = (
             challenger_stats["battles"] * challenger_stats["average_enemy_rank"]
             + opponent_stats["current_points"]
         ) / (challenger_stats["battles"] + 1)
+        # challenger's battles
         challenger_stats["battles"] = challenger_stats["battles"] + 1
+        # challenger's wins
         challenger_stats["wins"] = challenger_stats["wins"] + 1
 
+        # opponent's average_enemy_rank
         opponent_stats["average_enemy_rank"] = (
             opponent_stats["battles"] * opponent_stats["average_enemy_rank"]
             + challenger_stats["current_points"]
         ) / (opponent_stats["battles"] + 1)
+        # opponent's battles
         opponent_stats["battles"] = opponent_stats["battles"] + 1
 
-        # solve point change amount for both players
+        ### -----------------CHALLENGER WON------------------------------
+        ### solve point_change for both players based on rank differences
+
+        # first solve how rank difference affects point change
+        point_difference = abs(challenger_stats["current_points"] - opponent_stats["current_points"])
+        point_levels = point_difference // point_level_divident
+
+        # if challenger has bigger rank:
         if challenger_stats["current_points"] > opponent_stats["current_points"]:
             point_change = max(standard_point_change - point_levels, minimum_point_change)
-            challenger_new_points = (
-                challenger_stats["current_points"] + point_change
-            )  # challenger gains points
-            opponent_new_points = (
-                opponent_stats["current_points"] - point_change
-            )  # opponent loses points
+            # challenger gains less points than standard
+            challenger_new_points = challenger_stats["current_points"] + point_change
+            # opponent loses less points than standard
+            opponent_new_points = opponent_stats["current_points"] - point_change
 
+        # if opponent has bigger rank:
         elif challenger_stats["current_points"] < opponent_stats["current_points"]:
             point_change = standard_point_change + point_levels
-            challenger_new_points = (
-                challenger_stats["current_points"] + point_change
-            )  # challenger gains points
-            opponent_new_points = (
-                opponent_stats["current_points"] - point_change
-            )  # opponent loses points
+            # challenger gains more points than standard
+            challenger_new_points = challenger_stats["current_points"] + point_change
+            # opponent loses more points than standard
+            opponent_new_points = opponent_stats["current_points"] - point_change
 
+        # if ranks are exactly equal, challenger gains standard, opponent loses standard
         else:
             challenger_new_points = challenger_stats["current_points"] + standard_point_change
             opponent_new_points = opponent_stats["current_points"] - standard_point_change
 
-    # IF OPPONENT WINS
+    ### ----------------------------------------------------
+    ### -----IF OPPONENT WINS-------------------------------
     else:
-        # update both players battles, wins, average_enemy_rank
+
+        ### update average_enemy_rank, battles and wins for both participants
+
+        # opponent's average_enemy_rank
         opponent_stats["average_enemy_rank"] = (
             opponent_stats["battles"] * opponent_stats["average_enemy_rank"]
             + challenger_stats["current_points"]
         ) / (opponent_stats["battles"] + 1)
+        # opponent's battles
         opponent_stats["battles"] = opponent_stats["battles"] + 1
+        # opponent's wins
         opponent_stats["wins"] = opponent_stats["wins"] + 1
 
+        # challenger's average_enemy_rank
         challenger_stats["average_enemy_rank"] = (
             challenger_stats["battles"] * challenger_stats["average_enemy_rank"]
             + opponent_stats["current_points"]
         ) / (challenger_stats["battles"] + 1)
+        # challenger's battles
         challenger_stats["battles"] = challenger_stats["battles"] + 1
 
-        # solve point change amount for both players
+        ### --------------OPPONENT WON-----------------------------------
+        ### solve point_change for both players based on rank differences
+
+        # first solve how rank difference affects point change
+        point_difference = abs(challenger_stats["current_points"] - opponent_stats["current_points"])
+        point_levels = point_difference // point_level_divident
+
+        # if challenger has bigger rank:
         if challenger_stats["current_points"] > opponent_stats["current_points"]:
             point_change = standard_point_change + point_levels
-            opponent_new_points = (
-                opponent_stats["current_points"] + point_change
-            )  # opponent gains points
-            challenger_new_points = (
-                challenger_stats["current_points"] - point_change
-            )  # challenger loses points
+            # opponent gains more points than standard
+            opponent_new_points = opponent_stats["current_points"] + point_change
+            # challenger loses more points than standard
+            challenger_new_points = challenger_stats["current_points"] - point_change
 
+        # if opponent has bigger rank:
         elif challenger_stats["current_points"] < opponent_stats["current_points"]:
             point_change = max(standard_point_change - point_levels, minimum_point_change)
-            opponent_new_points = (
-                opponent_stats["current_points"] + point_change
-            )  # opponent gains points
-            challenger_new_points = (
-                challenger_stats["current_points"] - point_change
-            )  # challenger loses points
+            # opponent gains less points than standard
+            opponent_new_points = opponent_stats["current_points"] + point_change
+            # challenger gains more points than standard
+            challenger_new_points = challenger_stats["current_points"] - point_change
 
+        # if ranks are exactly equal, challenger loses standard, opponent gains standard
         else:
             challenger_new_points = challenger_stats["current_points"] - standard_point_change
             opponent_new_points = opponent_stats["current_points"] + standard_point_change
 
-    # STORE THE NEW POINTS TO DATABASE AS POINTS, AND CURRENT POINTS AND OLD_POINTS
+    ### --------------------------------------------
+    ### STORE THE NEW AND CURRENT POINTS TO DATABASE
+
     # update challenger points
     cursor.execute(
         """
@@ -152,6 +173,7 @@ async def _update_player_points(challenger, opponent, challenger_win: bool):
             str(challenger.id),
         ),
     )
+
     # update opponent points
     cursor.execute(
         """
@@ -173,7 +195,8 @@ async def _update_player_points(challenger, opponent, challenger_win: bool):
             str(opponent.id),
         ),
     )
+    # all points have been updated!
     return
 
 
-# update player points ends
+# _update_player_points ends

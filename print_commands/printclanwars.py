@@ -1,5 +1,5 @@
 # printclanwars.py
-# 2nd october 2024
+# 4th october 2024
 
 from services import conn
 from private_functions import _fetch_existing_clannames
@@ -7,17 +7,18 @@ from private_functions import _fetch_existing_clannames
 
 async def cmd_printclanwars(ctx, clanname: str, number: int):
     clanname = clanname.lower()
+
+    # make sure given clan exists
     existing_clans = await _fetch_existing_clannames()
     if clanname not in existing_clans:
         await ctx.respond(
-            f"```{clanname} is not part of existing clans: \n"
-            f"{existing_clans} \n"
+            f"```{clanname} is not part of existing clans: \n{existing_clans} \n"
             f"You may use '/registerclan' to create a new clan.```",
             ephemeral=True,
         )
         return
 
-    # first fetch the id of given clan, so it will be easier to find all clanwars containing that id in challenger or defender
+    # fetches the id of given clan
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM clans WHERE name = %s", (clanname,))
     wanted_clan_id = cursor.fetchone()[0]
@@ -26,21 +27,23 @@ async def cmd_printclanwars(ctx, clanname: str, number: int):
         SELECT 
             clanwars.date, 
             challenger_clan.name AS challenger_name, 
-            clanwars.challenger_won_rounds, 
-            defender_clan.name AS defender_name, 
-            clanwars.defender_won_rounds
+            clanwars.challenger_score, 
+            opponent_clan.name AS opponent_name, 
+            clanwars.opponent_score
         FROM clanwars
         LEFT JOIN clans AS challenger_clan ON clanwars.challenger_clan_id = challenger_clan.id
-        LEFT JOIN clans AS defender_clan ON clanwars.defender_clan_id = defender_clan.id
-        WHERE challenger_clan.id = %s OR defender_clan.id = %s
+        LEFT JOIN clans AS opponent_clan ON clanwars.opponent_clan_id = opponent_clan.id
+        WHERE challenger_clan.id = %s OR opponent_clan.id = %s
         ORDER BY clanwars.date DESC, clanwars.id DESC""",
         (
             wanted_clan_id,
             wanted_clan_id,
         ),
     )
-    clanwars = cursor.fetchmany(number)
+
     # print clanwar history
+    clanwars = cursor.fetchmany(number)
+
     if len(clanwars) >= 1:
         scores = []
         scores.append(f"```** {number} CLANWARS OF {clanname.upper()}: **```")
@@ -51,8 +54,7 @@ async def cmd_printclanwars(ctx, clanname: str, number: int):
             scores.append(printable_text)
 
         scores.append(
-            f"```** {number} MOST RECENT CLANWARS OF {clanname.upper()}"
-            f" HAVE BEEN PRINTED! **```"
+            f"```** {number} MOST RECENT CLANWARS OF {clanname.upper()}" f" HAVE BEEN PRINTED! **```"
         )
         await ctx.respond("".join(scores))
         return
@@ -64,4 +66,4 @@ async def cmd_printclanwars(ctx, clanname: str, number: int):
         return
 
 
-# print clan wars ends
+# cmd_printclanwars ends

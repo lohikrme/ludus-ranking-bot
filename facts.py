@@ -1,3 +1,6 @@
+# facts.py
+# updated 4th october 2024
+
 facts_eng = [
     "Mount Blanc is the highest mountain of Europe not Elbrus",
     "Camponotus herculeanus is the largest ant species of Europe",

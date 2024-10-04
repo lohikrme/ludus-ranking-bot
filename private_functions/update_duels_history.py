@@ -1,5 +1,5 @@
 # update_duels_history.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 import datetime
 from services import conn

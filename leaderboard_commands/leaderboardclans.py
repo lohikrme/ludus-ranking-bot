@@ -1,5 +1,5 @@
 # leaderboardclans.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 from services import conn
 
@@ -29,21 +29,21 @@ async def cmd_leaderboardclans(ctx, number: int):
         printable_text = ""
         if item[2] > 0:
             printable_text = (
-                f"   RANK {calculator}. CLAN: \n"
-                f" clanname: {item[0]}, \n"
-                f" points: {item[1]}, \n"
-                f" battles: {item[2]}, \n"
-                f" winrate: {round((item[3] / item[2]) * 100, 2)}%, \n"
-                f" avrg_enemy_rank: {round(item[4], 0)}"
+                f"   RANK {calculator}. CLAN: \n "
+                f"clanname: {item[0]}, \n "
+                f"points: {item[1]}, \n "
+                f"battles: {item[2]}, \n "
+                f"winrate: {round((item[3] / item[2]) * 100, 2)}%, \n "
+                f"avrg_enemy_rank: {round(item[4], 0)}"
             )
         else:
             printable_text = (
-                f"   RANK {calculator}. CLAN: \n"
-                f" clanname: {item[0]}, \n"
-                f" points: {item[1]}, \n"
-                f" battles: {item[2]}, \n"
-                f" winrate: 0%, \n"
-                f" avrg_enemy_rank: {round(item[4], 0)}"
+                f"   RANK {calculator}. CLAN: \n "
+                f"clanname: {item[0]}, \n "
+                f"points: {item[1]}, \n "
+                f"battles: {item[2]}, \n "
+                f"winrate: 0%, \n "
+                f"avrg_enemy_rank: {round(item[4], 0)}"
             )
         scores_per_clan.append(f"``` {printable_text.center(24)} ```")
     scores_per_clan.append(f"```  ** TOP{number} CLANS HAVE BEEN PRINTED! **```")

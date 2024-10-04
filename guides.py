@@ -1,4 +1,5 @@
-# updated 21th septemper 2024
+# guides.py
+# updated 4th october 2024
 
 guide_eng = """```'Ludus ranking bot' has 3 basic functionalities:
 

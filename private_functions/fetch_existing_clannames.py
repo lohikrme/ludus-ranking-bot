@@ -1,5 +1,5 @@
 # fetch_existing_clannames.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 from services import conn
 
@@ -15,4 +15,4 @@ async def _fetch_existing_clannames():
     return current_clans
 
 
-# fetch existing clannames ends
+# _fetch_existing_clannames ends

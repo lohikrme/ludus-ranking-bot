@@ -1,5 +1,5 @@
 # reportclanwar.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 import datetime
 from services import conn
@@ -13,31 +13,32 @@ import asyncio
 clanwar_status = []
 
 
+# CMD_REPORTCLANWAR STARTS
 async def cmd_reportclanwar(
     ctx,
     year: int,
     month: int,
     day: int,
-    reporter_clanname: str,
-    reporter_score: int,
+    challenger_clanname: str,
+    challenger_score: int,
     opponent_clanname: str,
     opponent_score: int,
 ):
+    # initiate important variables
     global clanwar_status
     all_admin_ids = []
     all_opponent_clanmember_ids = []
     opponent_admin_ids = []
 
-    reporter_clanname = reporter_clanname.lower()
+    # clannames are always processed lowercase
+    challenger_clanname = challenger_clanname.lower()
     opponent_clanname = opponent_clanname.lower()
-    # store here date for storing into database
-    date = datetime.datetime(1900, 1, 1)
 
     ### step1: validate that ctx.author is a registered admin and is not in clanwar already
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
-    existing_leader = cursor.fetchone()
-    if existing_leader is None:
+    author_is_admin = cursor.fetchone()
+    if author_is_admin is None:
         await ctx.respond(
             "```Only admins registered with '/registeradmin' can report clanwar scores!```",
             ephemeral=True,
@@ -65,33 +66,38 @@ async def cmd_reportclanwar(
         )
         return
 
-    ### step3: validate challenger and defender clannames and scores
+    ### step3: validate challenger and opponent clannames and scores
     existing_clans = await _fetch_existing_clannames()
 
-    if reporter_clanname not in existing_clans:
+    # challenger clan must exist
+    if challenger_clanname not in existing_clans:
         await ctx.respond(
-            f"```The reporter_clanname {reporter_clanname} wasn't part of: \n"
+            f"```The challenger_clanname {challenger_clanname} wasn't part of: \n"
             f"{existing_clans}. \n"
             f"If your clan's name is missing, please use '/registerclan'```",
-            ephemeral=True,
-        )
-        return
-    if opponent_clanname not in existing_clans:
-        await ctx.respond(
-            f"```The reporter_clanname {reporter_clanname} wasn't part of: \n"
-            f"{existing_clans}. \n"
-            f"If your clan's name is missing, please use '/registerclan'```",
-            ephemeral=True,
-        )
-        return
-    if reporter_score == opponent_score:
-        await ctx.respond(
-            f"```{reporter_score} equals {opponent_score}. \nScores may not be equal!```",
             ephemeral=True,
         )
         return
 
-    ### step 4: check that reporter_clanname is same as author's clanname
+    # opponent clan must exist
+    if opponent_clanname not in existing_clans:
+        await ctx.respond(
+            f"```The challenger_clanname {challenger_clanname} wasn't part of: \n"
+            f"{existing_clans}. \n"
+            f"If your clan's name is missing, please use '/registerclan'```",
+            ephemeral=True,
+        )
+        return
+
+    # scores must not be equal
+    if challenger_score == opponent_score:
+        await ctx.respond(
+            f"```{challenger_score} equals {opponent_score}. \nScores may not be equal!```",
+            ephemeral=True,
+        )
+        return
+
+    ### step 4: check that challenger_clanname is same as author's clanname
     cursor.execute(
         """SELECT clans.name 
                    FROM clans
@@ -100,18 +106,19 @@ async def cmd_reportclanwar(
         (str(ctx.author.id),),
     )
     authorclanname = cursor.fetchone()[0]
-    if authorclanname != reporter_clanname:
+    if authorclanname != challenger_clanname:
         await ctx.respond(
-            f"Reporter_clanname did not match to author's clan. \n"
+            f"challenger_clanname did not match to author's clan. \n"
             f"{ctx.author.mention} belongs to clan '{authorclanname}', \n"
-            f"while reporter_clanname was '{reporter_clanname}'",
+            f"while challenger_clanname was '{challenger_clanname}'",
             ephemeral=True,
         )
         return
 
     ### step 5: check that opponent_clanname has a registered admin, and store id for later use
+
     # first fetch opponent clan id
-    cursor.execute("SELECT clans.id FROM clans WHERE clans.name = %s", (opponent_clanname,))
+    cursor.execute("SELECT id FROM clans WHERE name = %s", (opponent_clanname,))
     opponent_clan_id = cursor.fetchone()[0]
 
     # second fetch all admin ids
@@ -125,6 +132,8 @@ async def cmd_reportclanwar(
         "SELECT players.discord_id FROM players WHERE players.clan_id = %s",
         (opponent_clan_id,),
     )
+
+    # see if an admin id is part of all opponent clanmembers
     opponent_players = cursor.fetchall()
     for player in opponent_players:
         all_opponent_clanmember_ids.append(player[0])
@@ -148,32 +157,37 @@ async def cmd_reportclanwar(
         embed=discord.Embed(
             title="",
             description=f"Waiting for opponent clan's admins to confirm: \n"
-            f"{reporter_clanname} vs {opponent_clanname} \n{reporter_score}-{opponent_score}",
+            f"{challenger_clanname} vs {opponent_clanname} \n{challenger_score}-{opponent_score}",
         )
     )
 
+    # define a function that messages all opponent admins about the score
+    # this function will be called several times, one admin at a time
     async def send_approval_message(
         admin_id,
         ctx,
         opponent_admin_ids,
-        reporter_clanname,
-        reporter_score,
+        challenger_clanname,
+        challenger_score,
         opponent_clanname,
         opponent_score,
         stop_listening_emoticons_event,
     ):
+        # this fetch will later use the previously found opponent_admin_ids array
         opponent_admin = await bot.fetch_user(admin_id)
+        # this embed message will be sent to all opponent admins
         approval_embed = discord.Embed(
             title=f"Confirm clanwar results:",
             description=(
-                f"{reporter_clanname} vs {opponent_clanname} \n"
-                f"{reporter_score}-{opponent_score}\n click ✅approve   🚫disagree."
+                f"{challenger_clanname} vs {opponent_clanname} \n"
+                f"{challenger_score}-{opponent_score}\n click ✅approve   🚫disagree."
             ),
         )
         approval_msg = await opponent_admin.send(embed=approval_embed)
         await approval_msg.add_reaction("✅")
         await approval_msg.add_reaction("🚫")
 
+        # after message has been sent, bot will wait for reactions until message expires
         try:
             reaction, user = await bot.wait_for(
                 "reaction_add",
@@ -194,39 +208,44 @@ async def cmd_reportclanwar(
                 return
             stop_listening_emoticons_event.set()
             clanwar_status.remove(ctx.author.id)
+
             ### step7: if all previous is ok, store given data into clanwars datatable
-            cursor.execute("SELECT id from clans WHERE name = %s", (reporter_clanname,))
+            cursor.execute("SELECT id from clans WHERE name = %s", (challenger_clanname,))
             challenger_clan_id = cursor.fetchone()[0]
             cursor.execute("SELECT id from clans WHERE name = %s", (opponent_clanname,))
-            defender_clan_id = cursor.fetchone()[0]
+            opponent_clan_id = cursor.fetchone()[0]
             cursor.execute(
                 """
                 INSERT INTO clanwars (
                     date, 
                     challenger_clan_id, 
-                    defender_clan_id, 
-                    challenger_won_rounds, 
-                    defender_won_rounds
+                    opponent_clan_id, 
+                    challenger_score, 
+                    opponent_score
                 ) 
                 VALUES (%s, %s, %s, %s, %s)
                 """,
                 (
                     date,
                     challenger_clan_id,
-                    defender_clan_id,
-                    reporter_score,
+                    opponent_clan_id,
+                    challenger_score,
                     opponent_score,
                 ),
             )
 
             ### step8: solves first which clan won, then update_clan_points()
             challenger_won = False
-            if reporter_score > opponent_score:
+
+            # challenger clan won
+            if challenger_score > opponent_score:
                 challenger_won = True
-                await _update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
+                await _update_clan_points(challenger_clan_id, opponent_clan_id, challenger_won)
+
+            # opponent clan won
             else:
                 challenger_won = False
-                await _update_clan_points(challenger_clan_id, defender_clan_id, challenger_won)
+                await _update_clan_points(challenger_clan_id, opponent_clan_id, challenger_won)
 
             ### step9: notify author's channel and opponent admins of clanwar results and ranks
             cursor.execute(
@@ -236,49 +255,49 @@ async def cmd_reportclanwar(
             challenger_stats = cursor.fetchone()
             cursor.execute(
                 "SELECT points, old_points FROM clans WHERE id = %s",
-                (defender_clan_id,),
+                (opponent_clan_id,),
             )
-            defender_stats = cursor.fetchone()
+            opponent_stats = cursor.fetchone()
 
             if challenger_won:
                 pointchange = challenger_stats[0] - challenger_stats[1]
                 await ctx.respond(
                     f"```{date.strftime('%x')} \n"
-                    f"{reporter_clanname} has won the clanwar "
+                    f"{challenger_clanname} has won the clanwar "
                     f"against {opponent_clanname} with scores "
-                    f"{reporter_score}-{opponent_score}! \n"
-                    f"{reporter_clanname} new points:"
+                    f"{challenger_score}-{opponent_score}! \n"
+                    f"{challenger_clanname} new points:"
                     f"{challenger_stats[0]}(+{pointchange}). \n"
                     f"{opponent_clanname} new points:"
-                    f"{defender_stats[0]}(-{pointchange}).```"
+                    f"{opponent_stats[0]}(-{pointchange}).```"
                 )
                 for id in opponent_admin_ids:
                     user = await bot.fetch_user(id)
                     await user.send(
                         f"```{date.strftime('%x')} \n"
-                        f"{reporter_clanname} has won the clanwar against {opponent_clanname} "
-                        f"with scores {reporter_score}-{opponent_score}! \n"
-                        f"{reporter_clanname} new points:{challenger_stats[0]}(+{pointchange}). \n"
-                        f"{opponent_clanname} new points:{defender_stats[0]}(-{pointchange}).```"
+                        f"{challenger_clanname} has won the clanwar against {opponent_clanname} "
+                        f"with scores {challenger_score}-{opponent_score}! \n"
+                        f"{challenger_clanname} new points:{challenger_stats[0]}(+{pointchange}). \n"
+                        f"{opponent_clanname} new points:{opponent_stats[0]}(-{pointchange}).```"
                     )
                 return
             else:
                 pointchange = challenger_stats[1] - challenger_stats[0]
                 await ctx.respond(
                     f"```{date.strftime('%x')} \n"
-                    f"{opponent_clanname} has won the clanwar against {reporter_clanname} "
-                    f"with scores {opponent_score}-{reporter_score}! \n"
-                    f"{opponent_clanname} new points:{defender_stats[0]}(+{pointchange}). \n"
-                    f"{reporter_clanname} new points:{challenger_stats[0]}(-{pointchange}).```"
+                    f"{opponent_clanname} has won the clanwar against {challenger_clanname} "
+                    f"with scores {opponent_score}-{challenger_score}! \n"
+                    f"{opponent_clanname} new points:{opponent_stats[0]}(+{pointchange}). \n"
+                    f"{challenger_clanname} new points:{challenger_stats[0]}(-{pointchange}).```"
                 )
                 for id in opponent_admin_ids:
                     user = await bot.fetch_user(id)
                     await user.send(
                         f"```{date.strftime('%x')} \n"
-                        f"{opponent_clanname} has won the clanwar against {reporter_clanname} "
-                        f"with scores {opponent_score}-{reporter_score}! \n"
-                        f"{opponent_clanname} new points:{defender_stats[0]}(+{pointchange}). \n"
-                        f"{reporter_clanname} new points:{challenger_stats[0]}(-{pointchange}).```"
+                        f"{opponent_clanname} has won the clanwar against {challenger_clanname} "
+                        f"with scores {opponent_score}-{challenger_score}! \n"
+                        f"{opponent_clanname} new points:{opponent_stats[0]}(+{pointchange}). \n"
+                        f"{challenger_clanname} new points:{challenger_stats[0]}(-{pointchange}).```"
                     )
                 return
 
@@ -300,8 +319,8 @@ async def cmd_reportclanwar(
             admin_id,
             ctx,
             opponent_admin_ids,
-            reporter_clanname,
-            reporter_score,
+            challenger_clanname,
+            challenger_score,
             opponent_clanname,
             opponent_score,
             stop_event,

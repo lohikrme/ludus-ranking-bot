@@ -1,5 +1,5 @@
 # bot_instance.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 import discord
 from discord.ext import commands

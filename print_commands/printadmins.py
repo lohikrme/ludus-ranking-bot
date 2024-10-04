@@ -1,5 +1,5 @@
 # printadmins.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 from services import conn
 
@@ -36,4 +36,4 @@ async def cmd_printadmins(ctx):
         await ctx.respond(f"There are no currently registered admins!", ephemeral=True)
 
 
-# print admins ends
+# cmd_printadmins ends

@@ -32,9 +32,9 @@ CREATE TABLE clanwars (
     id SERIAL PRIMARY KEY, 
     date DATE NOT NULL,
     challenger_clan_id INT NOT NULL,
-    defender_clan_id INT NOT NULL,
-    challenger_won_rounds INT DEFAULT 0 NOT NULL,
-    defender_won_rounds INT DEFAULT 0 NOT NULL);
+    opponent_clan_id INT NOT NULL,
+    challenger_score INT DEFAULT 0 NOT NULL,
+    opponent_score INT DEFAULT 0 NOT NULL);
 
 CREATE TABLE admins (
     id SERIAL PRIMARY KEY,

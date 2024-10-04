@@ -1,17 +1,83 @@
 # leaderboardplayers.py
-# updated 3rd october 2024
+# updated 4th october 2024
 
 from private_functions import _fetch_existing_clannames
 from services import conn
 
 
 async def cmd_leaderboardplayers(ctx, number: int, clanname: str):
-    # print all players of all clans
+    # print players of all clans
     if clanname == None:
         await _leaderboard_allplayers(ctx, number)
         return
-
     # print players of a specific clan
+    else:
+        await _leaderboard_clanplayers(ctx, number, clanname)
+        return
+
+
+# cmd_leaderboard_players ends
+
+
+# ----------------------------------------
+# ----------_LEADERBOARD_ALLPLAYERS-------
+async def _leaderboard_allplayers(ctx, number: int):
+    scores_per_player = []
+    scores_per_player.append("``` ** LEADERBOARD PLAYERS **```")
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT 
+            players.nickname, 
+            players.points, 
+            players.battles, 
+            players.wins, 
+            players.average_enemy_rank, 
+            clans.name 
+        FROM players 
+        LEFT JOIN clans ON players.clan_id = clans.id 
+        ORDER BY points DESC
+        """,
+        (),
+    )
+
+    top_players = cursor.fetchmany(number)
+    calculator = 0
+    for item in top_players:
+        calculator += 1
+        printable_text = ""
+        if item[2] > 0:
+            printable_text = (
+                f"    RANK: {calculator}. \n "
+                f"nickname: {item[0]}, \n "
+                f"points: {item[1]}, \n "
+                f"battles: {item[2]}, \n "
+                f"winrate: {round((item[3] / item[2]) * 100, 2)}%, \n "
+                f"avrg_enemy_rank: {round(item[4], 0)}, \n "
+                f"clanname: {item[5]}"
+            )
+        else:
+            printable_text = (
+                f"    RANK: {calculator}. \n "
+                f"nickname: {item[0]}, \n "
+                f"points: {item[1]}, \n "
+                f"battles: {item[2]}, \n "
+                f"winrate: 0%, \n "
+                f"avrg_enemy_rank: {round(item[4], 0)}, \n "
+                f"clanname: {item[5]}"
+            )
+        scores_per_player.append(f"``` {printable_text.center(24)} ```")
+    scores_per_player.append(f"```  ** TOP{number} PLAYERS HAVE BEEN PRINTED! **```")
+    await ctx.respond("".join(scores_per_player))
+
+
+# _leaderboard_allplayers ends
+
+
+# -------------------------------------------
+# ----------_LEADERBOARD_CLANPLAYERS --------
+async def _leaderboard_clanplayers(ctx, number: int, clanname: str):
     scores_per_player = []
     scores_per_player.append(f"``` ** LEADERBOARD PLAYERS OF {clanname.upper()} **```")
 
@@ -20,8 +86,7 @@ async def cmd_leaderboardplayers(ctx, number: int, clanname: str):
 
     if clanname not in current_clans:
         await ctx.respond(
-            f"```{clanname} is not part of existing clans: \n"
-            f"{current_clans} \n"
+            f"```{clanname} is not part of existing clans: \n {current_clans} \n"
             f"Please use '/registerclan' to create a new clan.```",
             ephemeral=True,
         )
@@ -56,81 +121,26 @@ async def cmd_leaderboardplayers(ctx, number: int, clanname: str):
         printable_text = ""
         if item[2] > 0:
             printable_text = (
-                f"  RANK: {calculator}. \n"
-                f" nickname: {item[0]}, \n"
-                f" points: {item[1]}, \n"
-                f" battles: {item[2]}, \n"
-                f" winrate: {round((item[3] / item[2]) * 100, 2)}%, \n"
-                f" avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
+                f"  RANK: {calculator}. \n "
+                f"nickname: {item[0]}, \n "
+                f"points: {item[1]}, \n "
+                f"battles: {item[2]}, \n "
+                f"winrate: {round((item[3] / item[2]) * 100, 2)}%, \n "
+                f"avrg_enemy_rank: {round(item[4], 0)}, \n clanname: {item[5]}"
             )
         else:
             printable_text = (
-                f"  RANK: {calculator}. \n"
-                f" nickname: {item[0]}, \n"
-                f" points: {item[1]}, \n"
-                f" battles: {item[2]}, \n"
-                f" winrate: 0%, \n"
-                f" avrg_enemy_rank:  {round(item[4], 0)}, \n"
-                f" clanname: {item[5]}"
+                f"  RANK: {calculator}. \n "
+                f"nickname: {item[0]}, \n "
+                f"points: {item[1]}, \n "
+                f"battles: {item[2]}, \n "
+                f"winrate: 0%, \n "
+                f"avrg_enemy_rank:  {round(item[4], 0)}, \n "
+                f"clanname: {item[5]}"
             )
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     scores_per_player.append(f"``` ** TOP{number} PLAYERS OF {clanname} HAVE BEEN PRINTED! **```")
     await ctx.respond("".join(scores_per_player))
 
 
-# cmd_leaderboardplayers ends
-
-
-# LEADERBOARD ALLPLAYERS
-async def _leaderboard_allplayers(ctx, number: int):
-    scores_per_player = []
-    scores_per_player.append("``` ** LEADERBOARD PLAYERS **```")
-
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT 
-            players.nickname, 
-            players.points, 
-            players.battles, 
-            players.wins, 
-            players.average_enemy_rank, 
-            clans.name 
-        FROM players 
-        LEFT JOIN clans ON players.clan_id = clans.id 
-        ORDER BY points DESC
-        """,
-        (),
-    )
-
-    top_players = cursor.fetchmany(number)
-    calculator = 0
-    for item in top_players:
-        calculator += 1
-        printable_text = ""
-        if item[2] > 0:
-            printable_text = (
-                f"    RANK: {calculator}. \n"
-                f" nickname: {item[0]}, \n"
-                f" points: {item[1]}, \n"
-                f" battles: {item[2]}, \n"
-                f" winrate: {round((item[3] / item[2]) * 100, 2)}%, \n"
-                f" avrg_enemy_rank: {round(item[4], 0)}, \n"
-                f" clanname: {item[5]}"
-            )
-        else:
-            printable_text = (
-                f"    RANK: {calculator}. \n"
-                f" nickname: {item[0]}, \n"
-                f" points: {item[1]}, \n"
-                f" battles: {item[2]}, \n"
-                f" winrate: 0%, \n"
-                f" avrg_enemy_rank: {round(item[4], 0)}, \n"
-                f" clanname: {item[5]}"
-            )
-        scores_per_player.append(f"``` {printable_text.center(24)} ```")
-    scores_per_player.append(f"```  ** TOP{number} PLAYERS HAVE BEEN PRINTED! **```")
-    await ctx.respond("".join(scores_per_player))
-
-
-# _leaderboard_allplayers ends
+# _leaderboard_clanplayers ends

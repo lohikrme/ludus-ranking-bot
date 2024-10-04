@@ -1,5 +1,5 @@
 # changemynick.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 from private_functions import _is_registered
 from services import conn

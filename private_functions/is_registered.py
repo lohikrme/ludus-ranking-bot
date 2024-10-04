@@ -1,19 +1,22 @@
 # is_registered.py
-# updated 2nd october 2024
+# updated 4th october 2024
 
 from services import conn
 
 
-# USE THIS TO CHECK IF USER REGISTERED
+# CHECK IF USER IS REGISTERED
 async def _is_registered(discord_id: str):
+    # checks if the discord_id is found from registered players
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM players WHERE discord_id = %s", (discord_id,))
     existing_user = cursor.fetchone()
 
-    if existing_user is not None:  # user is registered
+    # user is registered
+    if existing_user is not None:
         return True
+    # user is not registered
+    else:
+        return False
 
-    return False  # user is not registered
 
-
-# is registered ends
+# _is_registered ends
