@@ -1,5 +1,5 @@
 -- database.sql 
--- updated 18th septemper 2024
+-- updated 6th october 2024
 
 -- NOTE: THIS DATABASE IS BASED ON POSTGRE RELATIONAL DATABASE
 
