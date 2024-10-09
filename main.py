@@ -23,6 +23,7 @@ from leaderboard_commands import (
 )
 from report_commands import cmd_reportclanwar, cmd_reportft7
 from print_commands import cmd_printclanwars, cmd_printmyft7, cmd_printadmins
+from clannames import clans
 
 
 # use this array to update guilds, but also store them permanently in database
@@ -127,25 +128,29 @@ async def registerplayer(ctx, nickname: str):
 
 
 # REGISTER CLAN COMMAND
-@bot.slash_command(name="registernewclan", description="Register a new clan.")
+@bot.slash_command(
+    name="registernewclan",
+    description="An admin can register a new clanname. Changes will take a few days.",
+)
 async def registernewclan(ctx, clanname: str):
     await cmd_registernewclan(ctx, clanname)
 
 
 # REGISTER ADMIN COMMAND
-@bot.slash_command(name="registeradmin", description="Register to be a clan admin!")
+@bot.slash_command(name="registeradmin", description="Register to be a admin!")
 async def registeradmin(ctx, password: str):
     await cmd_registeradmin(ctx, password)
 
 
-# CHANGEYOURNICKNAME COMMAND
+# CHANGEMYNICKNAME COMMAND
 @bot.slash_command(name="changemynick", description="Give yourself a new nickname!")
 async def changemynick(ctx, nickname: str):
     await cmd_changemynick(ctx, nickname)
 
 
-# CHANGE YOUR CLAN COMMAND
+# CHANGEMYCLAN COMMAND
 @bot.slash_command(name="changemyclan", description="Give yourself a new clanname!")
+@discord.option("new_clanname", str, description="List of currently existing clans", choices=clans)
 async def changemyclan(ctx, new_clanname: str):
     await cmd_changemyclan(ctx, new_clanname)
 
@@ -163,7 +168,7 @@ async def myscore(ctx):
 # LEADERBOARD PLAYERS
 @bot.slash_command(name="leaderboardplayers", description="Print top players!")
 @discord.option("number", int, description="Number of players.")
-@discord.option("clanname", str, description="(Optional). A specific clan.", default=None)
+@discord.option("clanname", str, description="(Optional). A specific clan.", choices=clans, Default=None)
 async def leaderboardplayers(ctx, number: int, clanname: str):
     await cmd_leaderboardplayers(ctx, number, clanname)
 
@@ -182,9 +187,9 @@ async def leaderboardclans(ctx, number: int):
 
 # REPORT CLANWAR COMMAND
 @bot.slash_command(name="reportclanwar", description="Save clanwar scores permanently!")
-@discord.option("reporter_clanname", str, description="Your own clan's name.")
+@discord.option("reporter_clanname", str, description="Your own clan's name.", choices=clans)
 @discord.option("reporter_clanscore", int, description="Your own clan's score.")
-@discord.option("opponent_clanname", str, description="Your enemy's clan's name.")
+@discord.option("opponent_clanname", str, description="Your enemy's clan's name.", choices=clans)
 @discord.option("opponent_clanscore", int, description="Your enemy's clan's score.")
 async def reportclanwar(
     ctx,
@@ -221,6 +226,7 @@ async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score
 
 # PRINTCLANWARS COMMAND
 @bot.slash_command(name="printclanwars", description="Print clanwar history of a clan.")
+@discord.option("clanname", str, description="A specific clan.", choices=clans)
 @discord.option("number", int, description="Number of clanwars.")
 async def printclanwars(ctx, clanname: str, number: int):
     await cmd_printclanwars(ctx, clanname, number)
@@ -230,11 +236,15 @@ async def printclanwars(ctx, clanname: str, number: int):
 @bot.slash_command(name="printclannames", description="Print all existing clannames")
 async def printclannames(ctx):
     existing_clans = await _fetch_existing_clannames()
-    await ctx.respond(
-        f"Currently existing clans are next: \n"
-        f"{existing_clans} \n"
-        f" If you miss a clan, please use \n'/registerclan'!"
-    )
+    clans = []
+    calculator = 0
+    clans.append(f"Currently existing clans are: \n")
+    for clan in existing_clans:
+        calculator += 1
+        clans.append(f"{calculator}: {clan} \n")
+    clans.append("If you miss a clan, please ask a registered admin \n")
+    clans.append("to use '/registerclan'!")
+    await ctx.respond("".join(clans))
 
 
 # PRINTMYDUELS
