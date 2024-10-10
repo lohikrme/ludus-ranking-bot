@@ -52,9 +52,7 @@ async def _print_myft7s_against(ctx, number: int, opponent: discord.Member):
     opponent_nickname = cursor.fetchone()[0]
 
     # add first sentence to the printable text
-    duel_history.append(
-        f"```** {number} FT7s OF {author_nickname.upper()} vs {opponent_nickname.upper()} **```"
-    )
+    duel_history.append(f"```** FT7 {author_nickname.upper()} VS {opponent_nickname.upper()} **```")
 
     # fetch all duels of author agains the specific person
     # note that author can be either challenger or opponent in the database
@@ -88,11 +86,10 @@ async def _print_myft7s_against(ctx, number: int, opponent: discord.Member):
 
     # 0 = date, 1 = chall_nick, 2 = oppo_nick, 3 = chall_score, 4 = oppo_score
     for duel in duels:
-        message = f"```ft7 on {duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
+        message = f"```{duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
         duel_history.append(message)
     duel_history.append(
-        f"```{number} MOST RECENT FT7s OF {author_nickname.upper()}"
-        f" vs {opponent_nickname.upper()} HAVE BEEN PRINTED!```"
+        f"```{number} MOST RECENT FT7 {author_nickname.upper()}" f" VS {opponent_nickname.upper()}!```"
     )
     await ctx.respond("".join(duel_history))
     return
@@ -121,7 +118,7 @@ async def _print_myft7s(ctx, number: int):
     author_nickname = cursor.fetchone()[0]
 
     # add first sentence to the printable text
-    duel_history.append(f"```** {number} FT7s OF {author_nickname.upper()} **```")
+    duel_history.append(f"```** FT7 {author_nickname.upper()} **```")
 
     # fetch all duels where author was either challenger or opponent
     cursor.execute(
@@ -153,9 +150,7 @@ async def _print_myft7s(ctx, number: int):
         message = f"```{duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
         duel_history.append(message)
 
-    duel_history.append(
-        f"```{number} MOST RECENT FT7'S OF {author_nickname.upper()} HAVE BEEN PRINTED!```"
-    )
+    duel_history.append(f"```{number} MOST RECENT FT7 {author_nickname.upper()}!```")
 
     await ctx.respond("".join(duel_history))
     return
