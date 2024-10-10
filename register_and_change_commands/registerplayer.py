@@ -1,5 +1,5 @@
 # registerplayer.py
-# updated 4th october 2024
+# updated 10th october 2024
 
 from services import conn
 from private_functions import _is_registered
@@ -36,7 +36,7 @@ async def cmd_registerplayer(ctx, nickname: str):
             ),
         )
         await ctx.respond(
-            f"Your discord account has successfully been registered with nickname '{nickname}'"
+            f"Your discord account has successfully been registered with nickname '{nickname}'. "
             f"Nickname can be changed easily."
         )
 

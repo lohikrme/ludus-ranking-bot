@@ -1,14 +1,12 @@
 # update_player_points.py
-# updated 4th october 2024
+# updated 10th october 2024
 
 from services import conn
 
 
 # UPDATE PLAYER POINTS IN DATABASE
 async def _update_player_points(challenger, opponent, challenger_win: bool):
-    ### initiate new points and db connection
-    challenger_new_points = challenger_stats["current_points"]
-    opponent_new_points = opponent_stats["current_points"]
+    ### initiate db connection
     cursor = conn.cursor()
 
     ### standard_point_change is the change of ranking points if opponents have equal rank
@@ -44,6 +42,10 @@ async def _update_player_points(challenger, opponent, challenger_win: bool):
         "average_enemy_rank": result[2],
         "current_points": result[3],
     }
+
+    # initiate new points
+    challenger_new_points = challenger_stats["current_points"]
+    opponent_new_points = opponent_stats["current_points"]
 
     ### -------------------------------
     ### -----IF CHALLENGER WINS--------
