@@ -4,3 +4,4 @@ from .update_clan_points import _update_clan_points
 from .update_duels_history import _update_duels_history
 from .update_player_points import _update_player_points
 from .fetch_existing_admins import _fetch_existing_admins
+from .fetch_nickname import _fetch_nickname

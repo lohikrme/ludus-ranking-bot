@@ -8,6 +8,7 @@ from private_functions import (
     _is_registered,
     _update_player_points,
     _update_duels_history,
+    _fetch_nickname,
 )
 from services import conn
 
@@ -60,18 +61,21 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
         )
         return
 
-    # step 3: program begins! add author to ft7_status to prevent spam
+    # step 3: program begins! add author to ft7_status to prevent spam and fetch nicknames
     ft7_status.append(ctx.author.id)
     await ctx.respond(
         f"Please wait for {opponent.display_name} to verify the ft7 scores!",
         ephemeral=True,
     )
 
+    chall_nick = await _fetch_nickname(str(ctx.author.id))
+    oppo_nick = await _fetch_nickname(str(opponent.id))
+
     # step 4: send to opponent private embed message which asks for approval of scores
     approval_embed = discord.Embed(
         title=f"Confirm ft7 results:",
         description=(
-            f"{ctx.author.display_name} vs {opponent.display_name} \n"
+            f"{ctx.author.mention} vs {opponent.mention} \n"
             f"{my_score}-{opponent_score}\n click ✅approve   🚫disagree."
         ),
     )
@@ -82,14 +86,14 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
     try:
         reaction, user = await bot.wait_for(
             "reaction_add",
-            timeout=300.0,
+            timeout=60.0,
             check=lambda reaction, user: user == opponent
             and str(reaction.emoji) in ["✅", "🚫"]
             and reaction.message.id == approval_msg.id,
         )
     except asyncio.TimeoutError:
-        await opponent.send(f"FT7 {ctx.author.display_name} vs {opponent.display_name} expired!")
-        await ctx.author.send(f"FT7 {ctx.author.display_name} vs {opponent.display_name} expired!")
+        await opponent.send(f"FT7 {ctx.author.mention} vs {opponent.mention} expired!")
+        await ctx.author.send(f"FT7 {ctx.author.mention} vs {opponent.mention} expired!")
         return
     except asyncio.CancelledError:
         return
@@ -126,12 +130,12 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
             opponent_new_points = opponent_points[0]
             opponent_old_points = opponent_points[1]
             challenger_win_embed = discord.Embed(
-                title=f"{ctx.author.display_name} has won against {opponent.display_name}!",
+                title=f"{chall_nick} has won against {oppo_nick}!",
                 description=(
                     f"{ctx.author.mention} new points: "
-                    f"{challenger_new_points}(+{challenger_new_points-challenger_old_points}) \n"
+                    f"{challenger_new_points} (+{challenger_new_points-challenger_old_points}) \n"
                     f"{opponent.mention} new points: "
-                    f"{opponent_new_points}(-{opponent_old_points - opponent_new_points})"
+                    f"{opponent_new_points} (-{opponent_old_points - opponent_new_points})"
                 ),
             )
             await ctx.author.send(embed=challenger_win_embed)
@@ -156,12 +160,12 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
             opponent_new_points = opponent_points[0]
             opponent_old_points = opponent_points[1]
             defender_win_embed = discord.Embed(
-                title=f"{opponent.display_name} has won against {ctx.author.display_name}!",
+                title=f"{oppo_nick} has won against {chall_nick}!",
                 description=(
                     f"{opponent.mention} new points: "
-                    f"{opponent_new_points}(+{opponent_new_points - opponent_old_points}) \n"
+                    f"{opponent_new_points} (+{opponent_new_points - opponent_old_points}) \n"
                     f"{ctx.author.mention} new points: "
-                    f"{challenger_new_points}(-{challenger_old_points - challenger_new_points})"
+                    f"{challenger_new_points} (-{challenger_old_points - challenger_new_points})"
                 ),
             )
             await ctx.author.send(embed=defender_win_embed)
@@ -172,8 +176,8 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
 
     # step 8: if scores are disagreed, notify challenger that opponent disagrees
     if str(reaction.emoji) == "🚫":
-        await ctx.author.send(f"{opponent.display_name} has disagreed with your ft7 scores!")
-        await opponent.send(f"You have disagreed with {ctx.author.display_name}'s ft7 scores ")
+        await ctx.author.send(f"{opponent.mention} has disagreed with your ft7 scores!")
+        await opponent.send(f"You have disagreed with ({ctx.author.mention})'s ft7 scores ")
         return
 
 
