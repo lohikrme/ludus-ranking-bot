@@ -89,7 +89,8 @@ async def _print_myft7s_against(ctx, number: int, opponent: discord.Member):
         message = f"```{duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
         duel_history.append(message)
     duel_history.append(
-        f"```{number} MOST RECENT FT7 {author_nickname.upper()}" f" VS {opponent_nickname.upper()}!```"
+        f"```** {number} MOST RECENT FT7s OF "
+        f"{author_nickname.upper()} VS {opponent_nickname.upper()}! **```"
     )
     await ctx.respond("".join(duel_history))
     return
@@ -150,7 +151,7 @@ async def _print_myft7s(ctx, number: int):
         message = f"```{duel[0]} \n{duel[1]} vs {duel[2]} [{duel[3]}-{duel[4]}]```"
         duel_history.append(message)
 
-    duel_history.append(f"```{number} MOST RECENT FT7 {author_nickname.upper()}!```")
+    duel_history.append(f"```** {number} MOST RECENT FT7s OF {author_nickname.upper()}! **```")
 
     await ctx.respond("".join(duel_history))
     return

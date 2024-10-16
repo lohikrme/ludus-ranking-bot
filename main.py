@@ -168,7 +168,7 @@ async def myscore(ctx):
 # LEADERBOARD PLAYERS
 @bot.slash_command(name="leaderboardplayers", description="Print top players!")
 @discord.option("number", int, description="Number of players.")
-@discord.option("clanname", str, description="(Optional). A specific clan.", choices=clans, Default=None)
+@discord.option("clanname", str, description="(Optional). A specific clan.", choices=clans, default=None)
 async def leaderboardplayers(ctx, number: int, clanname: str):
     await cmd_leaderboardplayers(ctx, number, clanname)
 
