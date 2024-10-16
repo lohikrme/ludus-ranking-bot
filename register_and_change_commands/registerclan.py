@@ -9,7 +9,7 @@ from settings import host_discord_id
 from bot_instance import bot
 
 
-async def cmd_registernewclan(ctx, clanname: str):
+async def cmd_registerclan(ctx, clanname: str):
     cursor = conn.cursor()
     allowed_characters = re.compile(r"^[\w\-\_\[\]\(\)\^]+$")
     clanname = clanname.lower()

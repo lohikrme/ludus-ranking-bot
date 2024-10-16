@@ -11,7 +11,7 @@ from services import conn
 from private_functions import _fetch_existing_clannames
 from register_and_change_commands import (
     cmd_registerplayer,
-    cmd_registernewclan,
+    cmd_registerclan,
     cmd_registeradmin,
     cmd_changemynick,
     cmd_changemyclan,
@@ -129,11 +129,11 @@ async def registerplayer(ctx, nickname: str):
 
 # REGISTER CLAN COMMAND
 @bot.slash_command(
-    name="registernewclan",
+    name="registerclan",
     description="An admin can register a new clanname. Changes will take a few days.",
 )
-async def registernewclan(ctx, clanname: str):
-    await cmd_registernewclan(ctx, clanname)
+async def registerclan(ctx, clanname: str):
+    await cmd_registerclan(ctx, clanname)
 
 
 # REGISTER ADMIN COMMAND
@@ -283,13 +283,13 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: s
 
     # basis for messages
     channel_message = (
-        f"on {date.lower()}! \n"
+        f"on {date.lower()} \n"
         f"at {where.lower()} \n"
-        f" password: {password}  \n \n"
-        f"{role.mention} click ⚔️ to join"
+        f"password: {password}  \n \n"
+        f"{role.mention} click ⚔️ to join!"
     )
     private_message = (
-        f"on {date}! \nPlease click ⚔️ in "
+        f"on {date.lower()}! \nPlease click ⚔️ on "
         f"{ctx.guild.name} '{ctx.channel.name}' channel if you want to join!"
     )
 
