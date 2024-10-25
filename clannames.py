@@ -1,5 +1,23 @@
 # clannames.py
-# updated 9th october 2024
+# updated 24th october 2024
 
-# update this array manually. it is required for discord slash commands choices
-clans = ["Marchia", "Legion", "Valkyrie"]
+# update this array manually, if a new clan is registered
+# also, go update the database.sql insert the clan just in case
+clans = [
+    "AG",
+    "Dragons",
+    "GRE",
+    "Imperium",
+    "LH",
+    "LastAlive",
+    "Legion",
+    "Legion_SVD",
+    "Marchia",
+    "ME",
+    "Meow",
+    "NOH",
+    "RS",
+    "VK",
+    "Valkyrie",
+    "WW",
+]

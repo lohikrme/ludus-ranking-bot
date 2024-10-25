@@ -1,0 +1,62 @@
+# docker-commands.txt
+# updated 25th october 2024
+
+# delete a container
+docker rm <name>
+
+# delete an image
+docker rm image <name>
+
+# see running containers
+docker ps
+
+# see all containers
+docker ps -a
+
+# see logs of a container
+docker logs <name> 
+
+# build an image
+docker build -t <image_name> -f <filepath_to_Dockerfile> --no-cache .
+
+# run image as a container
+docker run --network <network_name> --name <container_name> -e POSTGRES_DB=<db_name> -e POSTGRES_USER=<db_username> 
+-e POSTGRES_PASSWORD=<'db_password'> -p <hostmachine_port>:<db_port> -d <image_name>
+
+# turn container pause
+docker stop <container_name>
+
+# connect container with psql (remember use 5555 of port 5555:5432)
+psql -h localhost -p 5555 -U postgres -d ludus
+
+# create a new network
+docker network create <network_name>
+
+# see all created networks
+docker network ls
+
+# add both containers into the network by remaking containers within the network
+docker run --network <network_name> <all_needed_params> --name <container1_name> -d <image1_name>
+docker run --network <network_name> --name <container2_name> -d <image2_name>
+
+# find out the IP address of a container
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <container_name>
+
+# open git bash/sh command terminal for a container if container is not turned on yet
+docker run --network ludusbot-network -it --name <container_name> ludusbot-python-image bash
+
+# open git bash/sh command terminal if container is turned on
+docker exec -it <container_name> /bin/bash
+
+# naming convention of this project's docker
+
+# images:
+ludusbot-postgres-image
+ludusbot-python-image
+
+# containers:
+ludusbot-postgres-container
+ludusbot-python-container
+
+# networks:
+ludusbot-network

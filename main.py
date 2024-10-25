@@ -1,5 +1,5 @@
 # main.py
-# updated 4th october 2024
+# updated 24th october 2024
 
 import settings
 import random
@@ -66,11 +66,14 @@ async def on_guild_remove(guild):
 # BOT ENTERS THE CHANNEL
 @bot.event
 async def on_connect():
+    # fetch all guilds who adopted bot (Discord servers)
     current_guild_ids = await fetch_all_guild_ids()
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    # update commands of bot to all guilds
     await bot.sync_commands(guild_ids=current_guild_ids)
     print("Slash commands have been cleared and updated...")
     print("Wait a bit more before bot is ready...")
+    print("Print all clans: ", clans)
     print("Bot is finally ready to function!")
 
 

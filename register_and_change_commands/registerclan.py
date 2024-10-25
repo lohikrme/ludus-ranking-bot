@@ -1,5 +1,5 @@
 # registernewclan.py
-# updated 9th october 2024
+# updated 24th october 2024
 
 from services import conn
 import re
@@ -12,7 +12,6 @@ from bot_instance import bot
 async def cmd_registerclan(ctx, clanname: str):
     cursor = conn.cursor()
     allowed_characters = re.compile(r"^[\w\-\_\[\]\(\)\^]+$")
-    clanname = clanname.lower()
 
     # check if author is a registered admin
     current_admins = await _fetch_existing_admins()
@@ -51,7 +50,7 @@ async def cmd_registerclan(ctx, clanname: str):
     # message Host about the new clan, so they can update the clannames.py file
     clan_register_embed = discord.Embed(
         title=f"A new clan {clanname}!",
-        description=f"{ctx.author.name} has registered a new clan called '{clanname}'"
+        description=f"{ctx.author.mention} has registered a new clan called '{clanname}'"
         "\nPlease update the clannames.py file and restart the bot.",
     )
     host = await bot.fetch_user(host_discord_id)
