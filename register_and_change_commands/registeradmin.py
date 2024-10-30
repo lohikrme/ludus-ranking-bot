@@ -3,10 +3,17 @@
 
 import settings
 from services import conn
+from private_functions import _is_registered
 
 
 async def cmd_registeradmin(ctx, password: str):
     cursor = conn.cursor()
+
+    # check if admin is a registered player
+    registered = await _is_registered(str(ctx.author.id))
+    if not registered:
+        await ctx.respond("Please use '/registerplayer' first to register as a player!", ephemeral=True)
+        return
 
     # check if admin has already been registered
     cursor.execute("SELECT * FROM admins WHERE discord_id = %s", (str(ctx.author.id),))

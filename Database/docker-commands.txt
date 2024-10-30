@@ -1,11 +1,16 @@
+### general docker commands
+
 # docker-commands.txt
-# updated 25th october 2024
+# updated 30th october 2024
 
 # delete a container
 docker rm <name>
 
 # delete an image
 docker rm image <name>
+
+# list images
+docker image list
 
 # see running containers
 docker ps
@@ -16,28 +21,21 @@ docker ps -a
 # see logs of a container
 docker logs <name> 
 
-# build an image
+# build an image (notice dot in the end)
 docker build -t <image_name> -f <filepath_to_Dockerfile> --no-cache .
-
-# run image as a container
-docker run --network <network_name> --name <container_name> -e POSTGRES_DB=<db_name> -e POSTGRES_USER=<db_username> 
--e POSTGRES_PASSWORD=<'db_password'> -p <hostmachine_port>:<db_port> -d <image_name>
-
-# turn container pause
-docker stop <container_name>
-
-# connect container with psql (remember use 5555 of port 5555:5432)
-psql -h localhost -p 5555 -U postgres -d ludus
 
 # create a new network
 docker network create <network_name>
 
-# see all created networks
-docker network ls
+# run image as a container
+docker run --network <network_name> --name <container_name>  
+-p <hostmachine_port>:<db_port> -d <image_name>
 
-# add both containers into the network by remaking containers within the network
-docker run --network <network_name> <all_needed_params> --name <container1_name> -d <image1_name>
-docker run --network <network_name> --name <container2_name> -d <image2_name>
+# turn container pause
+docker stop <container_name>
+
+# start container again
+docker start <container_name>
 
 # find out the IP address of a container
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <container_name>
@@ -48,7 +46,12 @@ docker run --network ludusbot-network -it --name <container_name> ludusbot-pytho
 # open git bash/sh command terminal if container is turned on
 docker exec -it <container_name> /bin/bash
 
-# naming convention of this project's docker
+# connect container with psql (remember use 5555 of port 5555:5432)
+psql -h ludusbot-postgres-container -p 5432 -U postgres -d ludus
+
+
+
+### naming convention of this project's docker:
 
 # images:
 ludusbot-postgres-image
@@ -60,3 +63,19 @@ ludusbot-python-container
 
 # networks:
 ludusbot-network
+
+
+
+### core commands completed for build:
+    # at folder Database:
+    docker build -t ludusbot-postgres-image -f Dockerfile.postgres --no-cache .
+
+    # at root folder
+    docker build -t ludusbot-python-image -f Dockerfile.python --no-cache .
+
+    # at anywhere
+    docker image list
+    docker create network ludusbot-network
+    docker run --network ludusbot-network --name ludusbot-postgres-container -d ludusbot-postgres-image
+    docker run --network ludusbot-network --name ludusbot-python-container -d ludusbot-python-image
+    docker ps

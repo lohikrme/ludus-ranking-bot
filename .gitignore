@@ -1,4 +1,5 @@
 settings.py
 __pycache__
-*Dockerfile*
+Dockerfile.postgres
 docker-compose.yml
+.env

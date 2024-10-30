@@ -1,0 +1,18 @@
+# Dockerfile.python
+# updated 25th october 2024
+
+# Käytä virallista Python 3.11.1 -kuvaa
+FROM python:3.11.10-bookworm
+
+# Aseta työskentelyhakemisto kontissa
+WORKDIR /app
+
+# Kopioi riippuvuudet ja asenna ne
+COPY requirements.txt /app/requirements.txt
+RUN python -m pip install -r requirements.txt
+
+# Kopioi kaikki lähdekoodit konttiin
+COPY . /app/
+
+# Suorita pääsovellustiedosto
+CMD ["python", "main.py"]
