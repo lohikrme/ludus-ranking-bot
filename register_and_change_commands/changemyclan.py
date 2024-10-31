@@ -6,7 +6,6 @@ from services import conn
 
 
 async def cmd_changemyclan(ctx, new_clanname: str):
-    new_clanname = new_clanname.lower()
 
     # check if user has registered
     is_registered_result = await _is_registered(str(ctx.author.id))
