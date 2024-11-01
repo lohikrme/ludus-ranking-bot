@@ -5,14 +5,17 @@ from services import conn
 
 
 # UPDATE CLAN POINTS IN DATABASE
-async def _update_clan_points(challenger_clan_id: int, opponent_clan_id: int, challenger_win: bool):
+async def _update_clan_points(
+    challenger_clan_id: int, opponent_clan_id: int, challenger_win: bool, stalemate: bool
+):
     # initiate db connection
     cursor = conn.cursor()
 
     ### standard_point_change is the change of ranking points if opponents have equal rank
     # point_level_divident determines, how much rank difference affects to point_change
+    # if stalemate happens, simply divide by 2 before adding points
     standard_point_change = 16
-    point_level_divident = 65
+    point_level_divident = 60
     minimum_point_change = 0
 
     ### FETCH CURRENT STATS FROM DATABASE
@@ -48,10 +51,68 @@ async def _update_clan_points(challenger_clan_id: int, opponent_clan_id: int, ch
     opponent_new_points = opponent_stats["current_points"]
 
     ### -----------------------------------------------
-    ### -----IF CHALLENGER WINS------------------------
-    if challenger_win:
+    ### -----IF STALEMATE-----------------------------
+    if stalemate:
 
-        ### update average_enemy_rank, battles and wins for both participants
+        # update both players battles, wins, average_enemy_rank
+
+        # challenger's average_enemy_rank
+        challenger_stats["average_enemy_rank"] = (
+            challenger_stats["battles"] * challenger_stats["average_enemy_rank"]
+            + opponent_stats["current_points"]
+        ) / (challenger_stats["battles"] + 1)
+        # challenger's battles
+        challenger_stats["battles"] = challenger_stats["battles"] + 1
+        # challenger's wins
+        challenger_stats["wins"] = challenger_stats["wins"] + 1
+
+        # opponent's average enemy rank
+        opponent_stats["average_enemy_rank"] = (
+            opponent_stats["battles"] * opponent_stats["average_enemy_rank"]
+            + challenger_stats["current_points"]
+        ) / (opponent_stats["battles"] + 1)
+        # opponent's battles
+        opponent_stats["battles"] = opponent_stats["battles"] + 1
+
+        ### -----------------STALEMATE------------------------------
+        ### solve point_change for both clans based on rank differences
+
+        # Determine which one has higher rank
+        # the one with lower rank gains points
+        # the one with higher rank loses points
+        # this time the point_change will be simply point_levels
+        # because stalemate is supposed to make less impact
+
+        # first solve how rank difference affects point change
+        point_difference = abs(challenger_stats["current_points"] - opponent_stats["current_points"])
+        point_levels = point_difference // point_level_divident
+
+        # if challenger has bigger rank, challenger lose a bit and opponent gains a bit:
+        if challenger_stats["current_points"] > opponent_stats["current_points"]:
+            point_change = point_levels
+            # challenger has bigger rank, so stalemate
+            challenger_new_points = challenger_stats["current_points"] - point_change
+            # opponent loses less points than standard
+            opponent_new_points = opponent_stats["current_points"] + point_change
+
+        # if opponent has bigger rank, opponent lose a bit and challenger gains a bit:
+        elif challenger_stats["current_points"] < opponent_stats["current_points"]:
+            point_change = point_levels
+            # challenger gains more points than standard
+            challenger_new_points = challenger_stats["current_points"] + point_change
+            # opponent loses more points than standard
+            opponent_new_points = opponent_stats["current_points"] - point_change
+
+        # if ranks are exactly equal, neither gains points
+        else:
+            challenger_new_points = challenger_stats["current_points"] + 0
+            opponent_new_points = opponent_stats["current_points"] - 0
+
+    ### -----------------------------------------------
+    ### -----IF CHALLENGER WINS------------------------
+    elif challenger_win:
+
+        # update both clans battles, wins, average_enemy_rank
 
         # challenger's average_enemy_rank
         challenger_stats["average_enemy_rank"] = (
@@ -72,7 +133,7 @@ async def _update_clan_points(challenger_clan_id: int, opponent_clan_id: int, ch
         opponent_stats["battles"] = opponent_stats["battles"] + 1
 
         ### -----------------CHALLENGER WON------------------------------
-        ### solve point_change for both players based on rank differences
+        ### solve point_change for both clans based on rank differences
 
         # first solve how rank difference affects point change
         point_difference = abs(challenger_stats["current_points"] - opponent_stats["current_points"])
@@ -103,7 +164,7 @@ async def _update_clan_points(challenger_clan_id: int, opponent_clan_id: int, ch
     ### -----IF OPPONENT WINS-------------------------------
     else:
 
-        # update both players battles, wins, average_enemy_rank
+        # update both clans battles, wins, average_enemy_rank
 
         # opponent's average_enemy_rank
         opponent_stats["average_enemy_rank"] = (
@@ -124,7 +185,7 @@ async def _update_clan_points(challenger_clan_id: int, opponent_clan_id: int, ch
         challenger_stats["battles"] = challenger_stats["battles"] + 1
 
         ### --------------OPPONENT WON-----------------------------------
-        ### solve point_change for both players based on rank differences
+        ### solve point_change for both clans based on rank differences
 
         # first solve how rank difference affects point change
         point_difference = abs(challenger_stats["current_points"] - opponent_stats["current_points"])

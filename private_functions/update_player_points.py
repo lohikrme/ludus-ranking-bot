@@ -12,7 +12,7 @@ async def _update_player_points(challenger, opponent, challenger_win: bool):
     ### standard_point_change is the change of ranking points if opponents have equal rank
     # point_level_divident determines, how much rank difference affects to point_change
     standard_point_change = 16
-    point_level_divident = 65
+    point_level_divident = 60
     minimum_point_change = 0
 
     ### FETCH CURRENT STATS FROM DATABASE

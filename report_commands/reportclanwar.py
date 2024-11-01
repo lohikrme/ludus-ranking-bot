@@ -66,7 +66,7 @@ async def cmd_reportclanwar(
         )
         return
 
-    ### step3: validate challenger and opponent clannames and scores
+    ### step3: validate challenger and opponent clannames
     existing_clans = await _fetch_existing_clannames()
 
     # challenger clan must exist
@@ -85,14 +85,6 @@ async def cmd_reportclanwar(
             f"```The challenger_clanname {challenger_clanname} wasn't part of: \n"
             f"{existing_clans}. \n"
             f"If your clan's name is missing, please use '/registerclan'```",
-            ephemeral=True,
-        )
-        return
-
-    # scores must not be equal
-    if challenger_score == opponent_score:
-        await ctx.respond(
-            f"```{challenger_score} equals {opponent_score}. \nScores may not be equal!```",
             ephemeral=True,
         )
         return
@@ -236,16 +228,28 @@ async def cmd_reportclanwar(
 
             ### step8: solves first which clan won, then update_clan_points()
             challenger_won = False
+            stalemate = False
+
+            # stalemate
+            if challenger_score == opponent_score:
+                challenger_won = False
+                await _update_clan_points(
+                    challenger_clan_id, opponent_clan_id, challenger_won, stalemate
+                )
 
             # challenger clan won
             if challenger_score > opponent_score:
                 challenger_won = True
-                await _update_clan_points(challenger_clan_id, opponent_clan_id, challenger_won)
+                await _update_clan_points(
+                    challenger_clan_id, opponent_clan_id, challenger_won, stalemate
+                )
 
             # opponent clan won
             else:
                 challenger_won = False
-                await _update_clan_points(challenger_clan_id, opponent_clan_id, challenger_won)
+                await _update_clan_points(
+                    challenger_clan_id, opponent_clan_id, challenger_won, stalemate
+                )
 
             ### step9: notify author's channel and opponent admins of clanwar results and ranks
             cursor.execute(
