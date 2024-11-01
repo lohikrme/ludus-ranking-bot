@@ -54,7 +54,7 @@ async def _update_clan_points(
     ### -----IF STALEMATE-----------------------------
     if stalemate:
 
-        # update both players battles, wins, average_enemy_rank
+        # update both clans battles, wins, average_enemy_rank
 
         # challenger's average_enemy_rank
         challenger_stats["average_enemy_rank"] = (
@@ -63,8 +63,6 @@ async def _update_clan_points(
         ) / (challenger_stats["battles"] + 1)
         # challenger's battles
         challenger_stats["battles"] = challenger_stats["battles"] + 1
-        # challenger's wins
-        challenger_stats["wins"] = challenger_stats["wins"] + 1
 
         # opponent's average enemy rank
         opponent_stats["average_enemy_rank"] = (

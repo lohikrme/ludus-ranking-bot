@@ -45,15 +45,7 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
         )
         return
 
-    # step 2: check that scores are not equal, and challenger is not already in ft7 (to avoid spam)
-    if my_score == opponent_score:
-        await ctx.respond(
-            f"Your score {my_score} and opponent score {opponent_score} are equal. "
-            f"Stalemate is not counted.",
-            ephemeral=True,
-        )
-        return
-
+    # step 2: check that challenger is not already in ft7 (to avoid spam)
     if ctx.author.id in ft7_status:
         await ctx.respond(
             f"You {ctx.author.mention} are already in ft7 with somebody.",
@@ -94,27 +86,65 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
     except asyncio.TimeoutError:
         await opponent.send(f"FT7 {ctx.author.mention} vs {opponent.mention} expired!")
         await ctx.author.send(f"FT7 {ctx.author.mention} vs {opponent.mention} expired!")
+        ft7_status.remove(ctx.author.id)
         return
     except asyncio.CancelledError:
+        await opponent.send(f"FT7 {ctx.author.mention} vs {opponent.mention} expired!")
+        await ctx.author.send(f"FT7 {ctx.author.mention} vs {opponent.mention} expired!")
+        ft7_status.remove(ctx.author.id)
         return
 
-    # step 5: if scores are approved, calculate winner
+    # step 5: if scores are approved, calculate winner or stalemate
     if str(reaction.emoji) == "✅":
+        ft7_status.remove(ctx.author.id)
+        stalemate = False
         challenger_won = False
         if my_score > opponent_score:
             challenger_won = True
+        if my_score == opponent_score:
+            stalemate = True
 
         # step 6: store scores and ranks into database
-        if challenger_won:
-            await _update_player_points(ctx.author, opponent, True)
+        if stalemate:
+            await _update_player_points(ctx.author, opponent, challenger_won, stalemate)
+            await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
+        elif challenger_won:
+            await _update_player_points(ctx.author, opponent, challenger_won, stalemate)
             await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
         else:
-            await _update_player_points(ctx.author, opponent, False)
+            await _update_player_points(ctx.author, opponent, challenger_won, stalemate)
             await _update_duels_history(str(ctx.author.id), str(opponent.id), my_score, opponent_score)
 
         # step 7: notify users of their new points and pointchange
-        if challenger_won:
-            ft7_status.remove(ctx.author.id)
+        if stalemate:
+            cursor.execute(
+                "SELECT points, old_points FROM players WHERE discord_id = %s",
+                (str(ctx.author.id),),
+            )
+            challenger_points = cursor.fetchone()
+            challenger_new_points = challenger_points[0]
+            challenger_old_points = challenger_points[1]
+            cursor.execute(
+                "SELECT points, old_points FROM players WHERE discord_id = %s",
+                (str(opponent.id),),
+            )
+            opponent_points = cursor.fetchone()
+            opponent_new_points = opponent_points[0]
+            opponent_old_points = opponent_points[1]
+            challenger_win_embed = discord.Embed(
+                title=f"STALEMATE {chall_nick} vs {oppo_nick}!",
+                description=(
+                    f"{ctx.author.mention} new points: "
+                    f"{challenger_new_points} (+{challenger_new_points-challenger_old_points}) \n"
+                    f"{opponent.mention} new points: "
+                    f"{opponent_new_points} (-{opponent_old_points - opponent_new_points})"
+                ),
+            )
+            await ctx.author.send(embed=challenger_win_embed)
+            await opponent.send(embed=challenger_win_embed)
+            return
+
+        elif challenger_won:
             cursor.execute(
                 "SELECT points, old_points FROM players WHERE discord_id = %s",
                 (str(ctx.author.id),),
@@ -143,8 +173,6 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
             return
 
         else:
-            ft7_status.remove(ctx.author.id)
-            cursor = conn.cursor()
             cursor.execute(
                 "SELECT points, old_points FROM players WHERE discord_id = %s",
                 (str(ctx.author.id),),
@@ -176,6 +204,7 @@ async def cmd_reportft7(ctx, opponent: discord.Member, my_score: int, opponent_s
 
     # step 8: if scores are disagreed, notify challenger that opponent disagrees
     if str(reaction.emoji) == "🚫":
+        ft7_status.remove(ctx.author.id)
         await ctx.author.send(f"{opponent.mention} has disagreed with your ft7 scores!")
         await opponent.send(f"You have disagreed with ({ctx.author.mention})'s ft7 scores ")
         return

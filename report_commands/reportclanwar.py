@@ -190,14 +190,19 @@ async def cmd_reportclanwar(
             )
         except asyncio.TimeoutError:
             await opponent_admin.send(f"Clanwar reporting expired!")
+            clanwar_status.remove(ctx.author.id)
             return
         except asyncio.CancelledError:
+            await opponent_admin.send(f"Clanwar reporting expired!")
+            clanwar_status.remove(ctx.author.id)
             return
 
         # HANDLE REACTIONS
         if str(reaction.emoji) == "✅":
+            # if an admin has already answered, do not listen
             if stop_listening_emoticons_event.is_set():
                 return
+            # so far no admin has answered, so stop listening now on
             stop_listening_emoticons_event.set()
             clanwar_status.remove(ctx.author.id)
 
@@ -263,7 +268,31 @@ async def cmd_reportclanwar(
             )
             opponent_stats = cursor.fetchone()
 
-            if challenger_won:
+            if stalemate:
+                pointchange = challenger_stats[0] - challenger_stats[1]
+                await ctx.respond(
+                    f"```{date.strftime('%x')} \n"
+                    f"STALEMATE {challenger_clanname} vs {opponent_clanname} "
+                    f"with scores {challenger_score}-{opponent_score}! \n"
+                    f"{challenger_clanname} new points:"
+                    f"{challenger_stats[0]}(+{pointchange}). \n"
+                    f"{opponent_clanname} new points:"
+                    f"{opponent_stats[0]}(-{pointchange}).```"
+                )
+                for id in opponent_admin_ids:
+                    user = await bot.fetch_user(id)
+                    await user.send(
+                        f"```{date.strftime('%x')} \n"
+                        f"STALEMATE {challenger_clanname} vs {opponent_clanname} "
+                        f"with scores {challenger_score}-{opponent_score}! \n"
+                        f"{challenger_clanname} new points:"
+                        f"{challenger_stats[0]}(+{pointchange}). \n"
+                        f"{opponent_clanname} new points:"
+                        f"{opponent_stats[0]}(-{pointchange}).```"
+                    )
+                return
+
+            elif challenger_won:
                 pointchange = challenger_stats[0] - challenger_stats[1]
                 await ctx.respond(
                     f"```{date.strftime('%x')} \n"
@@ -306,8 +335,10 @@ async def cmd_reportclanwar(
                 return
 
         elif str(reaction.emoji) == "🚫":
+            # an admin as already asnwered so do not listen
             if stop_listening_emoticons_event.is_set():
                 return
+            # so far no admin has answered, so stop listening now on
             stop_listening_emoticons_event.set()
             clanwar_status.remove(ctx.author.id)
             await ctx.respond("Enemy admins have disagreed with the clanwar scores!")
