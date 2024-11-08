@@ -79,3 +79,8 @@ ludusbot-network
     docker run --network ludusbot-network --name ludusbot-postgres-container -d ludusbot-postgres-image
     docker run --network ludusbot-network --name ludusbot-python-container -d ludusbot-python-image
     docker ps
+
+    ### core commands for system admin the project:
+    # to log in container inside virtual machine
+    sudo docker exec -it ludusbot-postgres-container /bin/bash
+    psql -U postgres -d ludus
