@@ -21,7 +21,7 @@ from leaderboard_commands import (
     cmd_leaderboardplayers,
     cmd_leaderboardclans,
 )
-from report_commands import cmd_reportclanwar, cmd_reportft7
+from report_commands import cmd_reportclanwar, cmd_reportft7, cmd_challengeft7
 from print_commands import cmd_printclanwars, cmd_printmyft7, cmd_printadmins
 from clannames import clans
 
@@ -39,28 +39,6 @@ async def fetch_all_guild_ids():
     for id in all_guild_ids:
         ids.append(int(id[0]))
     return ids
-
-
-@bot.event
-async def on_guild_join(guild):
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO guilds (id, name) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING",
-        (
-            str(guild.id),
-            str(guild.name),
-        ),
-    )
-    current_guild_ids.append(guild.id)
-    await bot.sync_commands(guild_ids=current_guild_ids)
-
-
-@bot.event
-async def on_guild_remove(guild):
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM guilds WHERE id = %s", (str(guild.id),))
-    current_guild_ids.remove(guild.id)
-    await bot.sync_commands(guild_ids=current_guild_ids)
 
 
 # BOT ENTERS THE CHANNEL
@@ -221,6 +199,13 @@ async def reportclanwar(
 @discord.option("opponent", discord.Member, description="Select opponent from the list.")
 async def reportft7(ctx, opponent: discord.Member, my_score: int, opponent_score: int):
     await cmd_reportft7(ctx, opponent, my_score, opponent_score)
+
+
+# CHALLENGEFT7 COMMAND
+@bot.slash_command(name="challengeft7", description="Challenge an opponent publicly to ft7!")
+@discord.option("opponent", discord.Member, description="Select opponent from the list.")
+async def challengeft7(ctx, opponent: discord.Member, my_score: int, opponent_score: int):
+    await cmd_challengeft7(ctx, opponent, my_score, opponent_score)
 
 
 # -------------------------------------------------------

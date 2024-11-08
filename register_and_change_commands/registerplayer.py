@@ -37,7 +37,8 @@ async def cmd_registerplayer(ctx, nickname: str):
         )
         await ctx.respond(
             f"Your discord account has successfully been registered with nickname '{nickname}'. "
-            f"Nickname can be changed easily."
+            f"Nickname can be changed easily.",
+            ephemeral=True,
         )
 
 

@@ -269,15 +269,34 @@ async def cmd_reportclanwar(
             opponent_stats = cursor.fetchone()
 
             if stalemate:
-                pointchange = challenger_stats[0] - challenger_stats[1]
+
+                challenger_new_points = challenger_stats[0]
+                challenger_old_points = challenger_stats[1]
+
+                opponent_new_points = opponent_stats[0]
+                opponent_old_points = opponent_stats[1]
+
+                pointchange = abs(challenger_new_points - challenger_old_points)
+
+                opponent_sign = ""
+                challenger_sign = ""
+
+                if challenger_new_points - challenger_old_points > 0:
+                    challenger_sign = "+"
+                    opponent_sign = "-"
+
+                elif challenger_new_points - challenger_old_points < 0:
+                    opponent_sign = "+"
+                    challenger_sign = "-"
+
                 await ctx.respond(
                     f"```{date.strftime('%x')} \n"
                     f"STALEMATE {challenger_clanname} vs {opponent_clanname} "
                     f"with scores {challenger_score}-{opponent_score}! \n"
                     f"{challenger_clanname} new points:"
-                    f"{challenger_stats[0]}(+{pointchange}). \n"
+                    f"{challenger_new_points}({challenger_sign}{pointchange}). \n"
                     f"{opponent_clanname} new points:"
-                    f"{opponent_stats[0]}(-{pointchange}).```"
+                    f"{opponent_new_points}({opponent_sign}{pointchange}).```"
                 )
                 for id in opponent_admin_ids:
                     user = await bot.fetch_user(id)
