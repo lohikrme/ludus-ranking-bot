@@ -101,3 +101,4 @@ CREATE TABLE guilds (
 INSERT INTO guilds(id, name) VALUES ('1060303582487908423', 'middle-earth');
 INSERT INTO guilds(id, name) VALUES ('1194360639544635482', 'legion');
 INSERT INTO guilds(id, name) VALUES ('1274726630668894249', 'valkyrie');
+INSERT INTO guilds (id, name) VALUES ('1225059828318343191', 'ludus-community');

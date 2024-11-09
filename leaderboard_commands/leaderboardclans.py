@@ -5,16 +5,22 @@ from services import conn
 
 
 async def cmd_leaderboardclans(ctx, number: int):
+    cursor = conn.cursor()
+
+    # initiate print
     scores_per_clan = []
     scores_per_clan.append(f"``` ** LEADERBOARD CLANS **```")
 
     number = int(number)
-    cursor = conn.cursor()
+
+    # fetch stats of active clans who have a registered admin
     cursor.execute(
         """
-        SELECT name, points, battles, wins, average_enemy_rank
+        SELECT clans.name, clans.points, clans.battles, clans.wins, clans.average_enemy_rank
         FROM clans
-        ORDER BY points DESC
+        INNER JOIN players ON players.clan_id = clans.id
+        INNER JOIN admins ON admins.discord_id = players.discord_id
+        ORDER BY clans.points DESC
         """,
         (),
     )

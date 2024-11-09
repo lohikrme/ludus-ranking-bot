@@ -30,10 +30,6 @@ async def cmd_reportclanwar(
     all_opponent_clanmember_ids = []
     opponent_admin_ids = []
 
-    # clannames are always processed lowercase
-    challenger_clanname = challenger_clanname.lower()
-    opponent_clanname = opponent_clanname.lower()
-
     ### step1: validate that ctx.author is a registered admin and is not in clanwar already
     cursor = conn.cursor()
     cursor.execute("SELECT discord_id FROM admins WHERE discord_id = %s", (str(ctx.author.id),))
