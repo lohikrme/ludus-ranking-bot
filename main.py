@@ -41,6 +41,27 @@ async def fetch_all_guild_ids():
     return ids
 
 
+# automaticly update guilds datatable if bot is added or removed from a server
+@bot.event
+async def on_guild_join(guild):
+    cursor = conn.cursor()
+    print("Bot has been added to the next server: ")
+    print(f"guild-name: {guild.name} \nguild-id: {str(guild.id)}\n")
+    cursor.execute("INSERT INTO guilds (id, name) VALUES (%s, %s)", (str(guild.id), guild.name))
+    current_guild_ids = await fetch_all_guild_ids()
+    await bot.sync_commands(guild_ids=current_guild_ids)
+
+
+@bot.event
+async def on_guild_remove(guild):
+    cursor = conn.cursor()
+    print("Bot has been removed from the next server: ")
+    print(f"guild-name: {guild.name} \nguild-id: {str(guild.id)}\n")
+    cursor.execute("DELETE FROM guilds WHERE id = (%s)", (str(guild.id),))
+    current_guild_ids = await fetch_all_guild_ids()
+    await bot.sync_commands(guild_ids=current_guild_ids)
+
+
 # BOT ENTERS THE CHANNEL
 @bot.event
 async def on_connect():
@@ -52,7 +73,7 @@ async def on_connect():
     print("Slash commands have been cleared and updated...")
     print("Wait a bit more before bot is ready...")
     print("Print all clans: ", clans)
-    print("Bot is finally ready to function!")
+    print("Bot is finally ready to function!\n")
 
 
 # --------------------------------------------------
@@ -305,5 +326,5 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: s
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
-token = settings.bot_token
+token = settings.development_bot_token
 bot.run(token)
