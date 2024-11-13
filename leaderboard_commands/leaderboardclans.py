@@ -53,7 +53,17 @@ async def cmd_leaderboardclans(ctx, number: int):
             )
         scores_per_clan.append(f"``` {printable_text.center(24)} ```")
     scores_per_clan.append(f"```  ** TOP{number} CLANS HAVE BEEN PRINTED! **```")
-    await ctx.respond("".join(scores_per_clan))
+
+    # print 14 records at time!
+    first_message = True
+    for i in range(0, len(scores_per_clan), 14):
+        chunk = scores_per_clan[i : i + 14]
+        if first_message:
+            await ctx.respond("".join(chunk))
+            first_message = False
+        else:
+            await ctx.send("".join(chunk))
+    # await ctx.respond("".join(scores_per_clan))
 
 
 # cmd_leaderboardclans ends

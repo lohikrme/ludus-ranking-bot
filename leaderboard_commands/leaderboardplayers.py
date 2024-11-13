@@ -69,7 +69,17 @@ async def _leaderboard_allplayers(ctx, number: int):
             )
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     scores_per_player.append(f"```  ** TOP{number} PLAYERS HAVE BEEN PRINTED! **```")
-    await ctx.respond("".join(scores_per_player))
+
+    # print 14 records at time!
+    first_message = True
+    for i in range(0, len(scores_per_player), 14):
+        chunk = scores_per_player[i : i + 14]
+        if first_message:
+            await ctx.respond("".join(chunk))
+            first_message = False
+        else:
+            await ctx.send("".join(chunk))
+    # await ctx.respond("".join(scores_per_player))
 
 
 # _leaderboard_allplayers ends
@@ -81,7 +91,6 @@ async def _leaderboard_clanplayers(ctx, number: int, clanname: str):
     scores_per_player = []
     scores_per_player.append(f"``` ** LEADERBOARD PLAYERS OF {clanname.upper()} **```")
 
-    clanname = clanname.lower()
     current_clans = await _fetch_existing_clannames()
 
     if clanname not in current_clans:
@@ -140,7 +149,17 @@ async def _leaderboard_clanplayers(ctx, number: int, clanname: str):
             )
         scores_per_player.append(f"``` {printable_text.center(24)} ```")
     scores_per_player.append(f"``` ** TOP{number} PLAYERS OF {clanname} HAVE BEEN PRINTED! **```")
-    await ctx.respond("".join(scores_per_player))
+
+    # print 14 records at time!
+    first_message = True
+    for i in range(0, len(scores_per_player), 14):
+        chunk = scores_per_player[i : i + 14]
+        if first_message:
+            await ctx.respond("".join(chunk))
+            first_message = False
+        else:
+            await ctx.send("".join(chunk))
+    # await ctx.respond("".join(scores_per_player))
 
 
 # _leaderboard_clanplayers ends
