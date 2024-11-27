@@ -233,6 +233,7 @@ async def cmd_reportclanwar(
 
             # stalemate
             if challenger_score == opponent_score:
+                stalemate = True
                 challenger_won = False
                 await _update_clan_points(
                     challenger_clan_id, opponent_clan_id, challenger_won, stalemate

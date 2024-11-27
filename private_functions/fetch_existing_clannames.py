@@ -7,7 +7,7 @@ from services import conn
 # FETCH EXISTING CLANNAMES
 async def _fetch_existing_clannames():
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM clans", ())
+    cursor.execute("SELECT name FROM clans ORDER BY name", ())
     clannames = cursor.fetchall()
     current_clans = []
     for item in clannames:

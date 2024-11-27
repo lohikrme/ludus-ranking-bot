@@ -13,7 +13,7 @@ clans = [
     "Legion",
     "Legion_SVD",
     "Marchia",
-    "ME",
+    "Mordor",
     "Meow",
     "MoB",
     "NoH",

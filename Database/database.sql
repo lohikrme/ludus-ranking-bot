@@ -36,7 +36,7 @@ INSERT INTO clans (name) VALUES ('LastAlive');
 INSERT INTO clans (name) VALUES ('Legion');
 INSERT INTO clans (name) VALUES ('Legion_SVD');
 INSERT INTO clans (name) VALUES ('Marchia');
-INSERT INTO clans (name) VALUES ('ME');
+INSERT INTO clans (name) VALUES ('Mordor');
 INSERT INTO clans (name) VALUES ('Meow');
 INSERT INTO clans (name) VALUES ('MoB');
 INSERT INTO clans (name) VALUES ('NoH');

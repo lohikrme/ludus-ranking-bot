@@ -23,15 +23,15 @@ async def cmd_registeradmin(ctx, password: str):
         return
 
     # check author belongs to a clan
-    # cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
-    # author_clan_id = cursor.fetchone()[0]
-    # if author_clan_id == 1:
-    #    await ctx.respond(
-    #        "You must join a clan before becoming an admin. "
-    #        "Admins represent their clans. Please use '/changemyclan'.",
-    #        ephemeral=True,
-    #    )
-    #    return
+    cursor.execute("SELECT clan_id FROM players WHERE discord_id = %s", (str(ctx.author.id),))
+    author_clan_id = cursor.fetchone()[0]
+    if author_clan_id == 1:
+        await ctx.respond(
+            "You must join a clan before becoming an admin. "
+            "Admins represent their clans. Please use '/changemyclan'.",
+            ephemeral=True,
+        )
+        return
 
     # check password is correct
     if password != settings.leaderpassword:
