@@ -1,5 +1,5 @@
 # leaderboardclans.py
-# updated 4th october 2024
+# updated 1st december 2024
 
 from services import conn
 
@@ -14,12 +14,23 @@ async def cmd_leaderboardclans(ctx, number: int):
     number = int(number)
 
     # fetch stats of active clans who have a registered admin
+    # cursor.execute(
+    #    """
+    #    SELECT clans.name, clans.points, clans.battles, clans.wins, clans.average_enemy_rank
+    #    FROM clans
+    #    INNER JOIN players ON players.clan_id = clans.id
+    #    INNER JOIN admins ON admins.discord_id = players.discord_id
+    #    ORDER BY clans.points DESC
+    #    """,
+    #    (),
+    # )
+
+    # fetch stats of active clans who have battles > 0
     cursor.execute(
         """
         SELECT clans.name, clans.points, clans.battles, clans.wins, clans.average_enemy_rank
         FROM clans
-        INNER JOIN players ON players.clan_id = clans.id
-        INNER JOIN admins ON admins.discord_id = players.discord_id
+        WHERE clans.battles > 0
         ORDER BY clans.points DESC
         """,
         (),

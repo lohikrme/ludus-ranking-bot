@@ -42,6 +42,7 @@ docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <co
 
 # open git bash/sh command terminal for a container if container is not turned on yet
 docker run --network ludusbot-network -it --name <container_name> ludusbot-python-image bash
+docker run --network ludusbot-docker-network -it --name ludusbot-python-container3 ludusbot-python-image bash
 
 # open git bash/sh command terminal if container is turned on
 docker exec -it <container_name> /bin/bash
@@ -77,7 +78,7 @@ ludusbot-network
     docker image list
     docker create network ludusbot-network
     docker run --network ludusbot-network --name ludusbot-postgres-container -d ludusbot-postgres-image
-    docker run --network ludusbot-network --name ludusbot-python-container -d ludusbot-python-image
+    sudo docker run --network ludusbot-docker-network --name ludusbot-python-container -d ludusbot-python-image
     docker ps
 
     ### core commands for system admin the project:

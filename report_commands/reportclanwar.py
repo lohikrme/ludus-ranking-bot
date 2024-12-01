@@ -275,8 +275,8 @@ async def cmd_reportclanwar(
 
                 pointchange = abs(challenger_new_points - challenger_old_points)
 
-                opponent_sign = ""
-                challenger_sign = ""
+                opponent_sign = "+"
+                challenger_sign = "+"
 
                 if challenger_new_points - challenger_old_points > 0:
                     challenger_sign = "+"
