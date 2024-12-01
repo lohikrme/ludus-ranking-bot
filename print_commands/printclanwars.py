@@ -6,7 +6,6 @@ from private_functions import _fetch_existing_clannames
 
 
 async def cmd_printclanwars(ctx, clanname: str, number: int):
-    clanname = clanname.lower()
 
     # make sure given clan exists
     existing_clans = await _fetch_existing_clannames()
