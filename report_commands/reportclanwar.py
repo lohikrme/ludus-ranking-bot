@@ -286,7 +286,7 @@ async def cmd_reportclanwar(
                     opponent_sign = "+"
                     challenger_sign = "-"
 
-                await ctx.respond(
+                await ctx.channel.send(
                     f"```{date.strftime('%x')} \n"
                     f"STALEMATE {challenger_clanname} vs {opponent_clanname} "
                     f"with scores {challenger_score}-{opponent_score}! \n"
@@ -310,7 +310,7 @@ async def cmd_reportclanwar(
 
             elif challenger_won:
                 pointchange = challenger_stats[0] - challenger_stats[1]
-                await ctx.respond(
+                await ctx.channel.send(
                     f"```{date.strftime('%x')} \n"
                     f"{challenger_clanname} has won the clanwar "
                     f"against {opponent_clanname} with scores "
@@ -332,7 +332,7 @@ async def cmd_reportclanwar(
                 return
             else:
                 pointchange = challenger_stats[1] - challenger_stats[0]
-                await ctx.respond(
+                await ctx.channel.send(
                     f"```{date.strftime('%x')} \n"
                     f"{opponent_clanname} has won the clanwar against {challenger_clanname} "
                     f"with scores {opponent_score}-{challenger_score}! \n"
@@ -357,7 +357,7 @@ async def cmd_reportclanwar(
             # so far no admin has answered, so stop listening now on
             stop_listening_emoticons_event.set()
             clanwar_status.remove(ctx.author.id)
-            await ctx.respond("Enemy admins have disagreed with the clanwar scores!")
+            await ctx.channel.send("Enemy admins have disagreed with the clanwar scores!")
             for id in opponent_admin_ids:
                 user = await bot.fetch_user(id)
                 await user.send("Admins have disagreed with the clanwar score!")
