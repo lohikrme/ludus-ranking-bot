@@ -326,5 +326,5 @@ async def eventannounce(ctx, role: discord.Role, title: str, date: str, where: s
 
 
 # TOKEN OF BOT TO IDENTIFY AND USE IN CHANNELS
-token = settings.production_bot_token
+token = settings.development_bot_token
 bot.run(token)
