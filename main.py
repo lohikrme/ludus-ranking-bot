@@ -1,5 +1,5 @@
 # main.py
-# updated 24th october 2024
+# updated 16th december 2024
 
 import settings
 import random
@@ -23,7 +23,7 @@ from leaderboard_commands import (
 )
 from report_commands import cmd_reportclanwar, cmd_reportft7, cmd_challengeft7
 from print_commands import cmd_printclanwars, cmd_printmyft7, cmd_printadmins
-from clannames import clans
+from clannames import clans, clans_with_none
 
 
 # use this array to update guilds, but also store them permanently in database
@@ -125,8 +125,9 @@ async def gerçekler(ctx):
 
 # REGISTER PLAYER COMMAND
 @bot.slash_command(name="registerplayer", description="Register yourself as a player!")
-async def registerplayer(ctx, nickname: str):
-    await cmd_registerplayer(ctx, nickname)
+@discord.option("clanname", str, description="A specific clan.", choices=clans_with_none)
+async def registerplayer(ctx, nickname: str, clanname: str):
+    await cmd_registerplayer(ctx, nickname, clanname)
 
 
 # REGISTER CLAN COMMAND

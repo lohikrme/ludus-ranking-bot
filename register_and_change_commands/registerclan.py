@@ -40,7 +40,10 @@ async def cmd_registerclan(ctx, clanname: str):
     existing_clan = cursor.fetchone()
 
     if existing_clan is not None:
-        await ctx.respond(f"The clanname {clanname} already exists", ephemeral=True)
+        await ctx.respond(
+            f"The clanname {clanname} already exists. Please ask Parrot from Legion clan to re-activate it.",
+            ephemeral=True,
+        )
         return
 
     # add a new clan
