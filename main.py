@@ -177,11 +177,9 @@ async def leaderboardplayers(ctx, number: int, clanname: str):
 
 
 # LEADERBOARD CLANS COMMAND
-# for example, user gives '/clanleaderboard 10' and bot gives scores of top10 clans
 @bot.slash_command(name="leaderboardclans", description="Print top clans!")
-@discord.option("number", int, description="Number of clans.")
-async def leaderboardclans(ctx, number: int):
-    await cmd_leaderboardclans(ctx, number)
+async def leaderboardclans(ctx):
+    await cmd_leaderboardclans(ctx)
 
 
 # -------------------------------------------------------
